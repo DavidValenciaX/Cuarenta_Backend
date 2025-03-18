@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { createUser } = require('../controllers/users_controller');
+const { createUser,confirmEmail,loginUser,logoutUser,forgotPassword,resetPassword } = require('../controllers/users_controller');
 const { verificarToken } = require('../middlewares/auth_middleware'); // Importar middleware
 
 /**
@@ -70,6 +70,228 @@ const { verificarToken } = require('../middlewares/auth_middleware'); // Importa
  *                   example: 'Las contraseñas no coinciden'
  */
 router.post('/register', createUser);
+
+/**
+ * @swagger
+ * /users/confirm-email:
+ *   post:
+ *     summary: Confirm user email
+ *     description: Confirms the user's email address by providing a token
+ *     tags:
+ *       - Users
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - token
+ *             properties:
+ *               token:
+ *                 type: string
+ *                 example: 'H6s93'
+ *     responses:
+ *       200:
+ *         description: Email successfully confirmed or token resent
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: 'success'
+ *                 message:
+ *                   type: string
+ *                   example: 'Correo confirmado exitosamente'
+ *                 data:
+ *                   type: object
+ *                   example: { \"newToken\": \"abcd123...\", \"newExpiration\": \"2025-03-21T12:00:00-05:00\" }
+ *       400:
+ *         description: Missing token
+ *       404:
+ *         description: Invalid token or user not found
+ *       500:
+ *         description: Server error
+ */
+router.post('/confirm-email', confirmEmail);
+
+/**
+ * @swagger
+ * /users/login:
+ *   post:
+ *     summary: Log in a user
+ *     description: Logs in a user with email and password, returning a JWT token
+ *     tags:
+ *       - Users
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *               - password
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *                 example: 'juan@correo.com'
+ *               password:
+ *                 type: string
+ *                 example: 'SuperSecreto123'
+ *     responses:
+ *       200:
+ *         description: Successful login
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: 'success'
+ *                 message:
+ *                   type: string
+ *                   example: 'Inicio de sesión exitoso'
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     token:
+ *                       type: string
+ *                       example: 'eyJhbGciOiJIU...'
+ *       400:
+ *         description: Missing email or password
+ *       401:
+ *         description: Invalid credentials
+ *       500:
+ *         description: Server error
+ */
+router.post('/login', loginUser);
+
+/**
+ * @swagger
+ * /users/logout:
+ *   post:
+ *     summary: Log out a user
+ *     description: Invalidates the JWT token so it can no longer be used
+ *     tags:
+ *       - Users
+ *     security:
+ *       - bearerAuth: []  # Si usas bearerAuth en swagger
+ *     responses:
+ *       200:
+ *         description: User successfully logged out
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: 'success'
+ *                 message:
+ *                   type: string
+ *                   example: 'Logged out successfully'
+ *       401:
+ *         description: Invalid or expired token
+ *       500:
+ *         description: Server error
+ */
+router.post('/logout', logoutUser);
+
+/**
+ * @swagger
+ * /users/forgot-password:
+ *   post:
+ *     summary: Request password reset
+ *     description: Generates a password reset token and expiration, storing them in the user record
+ *     tags:
+ *       - Users
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *                 example: 'juan@correo.com'
+ *     responses:
+ *       200:
+ *         description: Password reset token generated
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: 'success'
+ *                 message:
+ *                   type: string
+ *                   example: 'Password reset token generated'
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     resetTokenHash:
+ *                       type: string
+ *                       example: 'abcdef123456...'
+ *                     resetTokenExpiration:
+ *                       type: string
+ *                       example: '2025-03-21T12:00:00-05:00'
+ *       404:
+ *         description: User not found
+ *       500:
+ *         description: Server error
+ */
+router.post('/forgot-password', forgotPassword);
+
+/**
+ * @swagger
+ * /users/reset-password:
+ *   post:
+ *     summary: Reset password
+ *     description: Verifies token and updates the user password
+ *     tags:
+ *       - Users
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - token
+ *               - newPassword
+ *               - confirmNewPassword
+ *             properties:
+ *               token:
+ *                 type: string
+ *                 example: 'abcdef123456...'
+ *               newPassword:
+ *                 type: string
+ *                 example: 'MyNewPassword123'
+ *               confirmNewPassword:
+ *                 type: string
+ *                 example: 'MyNewPassword123'
+ *     responses:
+ *       200:
+ *         description: Password updated successfully
+ *       400:
+ *         description: Missing or invalid body fields, or token expired
+ *       404:
+ *         description: Invalid token
+ *       500:
+ *         description: Server error
+ */
+router.post('/reset-password', resetPassword);
 
 router.get('/perfil', verificarToken, (req, res) => {
     res.json({ mensaje: 'Bienvenido, usuario autenticado', usuario: req.usuario });

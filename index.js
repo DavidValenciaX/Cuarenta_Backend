@@ -17,9 +17,19 @@ const swaggerOptions = {
     info: {
       title: 'Cuarenta API',
       version: '1.0.0',
+      description: 'Documentation of the API'
     },
+    components: {
+      securitySchemes: {
+        bearerAuth: {
+          type: 'http',
+          scheme: 'bearer',
+          bearerFormat: 'JWT' 
+        }
+      }
+    }
   },
-  apis: ['./app/routes/*.js'],
+  apis: ['./app/routes/*.js'], 
 };
 
 const swaggerSpec = swaggerJsdoc(swaggerOptions);
