@@ -43,7 +43,7 @@ class Category {
 
   static async findByNameAndUser(name, userId) {
     const { rows } = await pool.query(
-      `SELECT * FROM public.categories WHERE name = $1 AND user_id = $2`,
+      `SELECT * FROM public.categories WHERE name ILIKE= $1 AND user_id = $2`,
       [name, userId]
     );
     return rows[0];
