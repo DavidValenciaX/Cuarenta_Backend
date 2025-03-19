@@ -40,6 +40,15 @@ class Category {
     );
     return result.rows[0];
   }
+
+  static async findByNameAndUser(name, userId) {
+    const { rows } = await pool.query(
+      `SELECT * FROM public.categories WHERE name = $1 AND user_id = $2`,
+      [name, userId]
+    );
+    return rows[0];
+  }
+  
 }
 
 module.exports = Category;
