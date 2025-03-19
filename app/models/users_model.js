@@ -85,14 +85,21 @@ class User {
       //Busca contrasena del usuario por el email
       static async findUserWithPasswordByEmail(email) {
         const query = `
-          SELECT  id,  password_hash
-          FROM public.users
-          WHERE email = $1
+          SELECT 
+            u.id, 
+            u.password_hash,
+            st.name AS status,
+            sc.name AS category
+          FROM public.users u
+          JOIN status_types st ON u.status_id = st.id
+          JOIN status_categories sc ON st.category_id = sc.id
+          WHERE u.email = $1
           LIMIT 1
         `;
         const { rows } = await pool.query(query, [email]);
-        return rows[0]; // Retorna undefined si no encuentra nada
+        return rows[0];
       }
+      
 
         // Actualizar token y expiración para el reseteo de contraseña
   static async updateResetToken(userId, resetTokenHash, resetTokenExpiration) {

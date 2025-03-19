@@ -4,6 +4,8 @@ const crypto = require('crypto');
 const { validateEmail, validatePhone } = require('../utils/validate_util');
 const { sendResponse } = require('../utils/response_util');
 const { generateToken } = require('../utils/generate_token');
+const { addToBlacklist} = require('../utils/token_blacklist');
+
 const jwt = require('jsonwebtoken'); 
 
 const moment = require('moment-timezone');
@@ -106,6 +108,10 @@ async function confirmEmail(req, res) {
         return sendResponse(res, 401, 'error', 'Credenciales inválidas');
       }
   
+      if (user.status === 'pending_confirmation' && user.category === 'user') {
+        return sendResponse(res, 403, 'error', 'Cuenta pendiente por confirmar');
+      }
+
       // Comparar password ingresada con el hash en DB
       const isMatch = await bcrypt.compare(password, user.password_hash);
       if (!isMatch) {
@@ -163,7 +169,7 @@ async function logoutUser(req, res) {
   
       // Generar token y expiración 
       const resetTokenHash = generateToken();
-      const resetTokenExpiration = moment().tz('America/Bogota').add(2, 'minute').format();
+      const resetTokenExpiration = moment().tz('America/Bogota').add(20, 'minute').format();
   
       // Guardar en DB
       await User.updateResetToken(user.id, resetTokenHash, resetTokenExpiration);

@@ -141,7 +141,7 @@ router.post('/confirm-email', confirmEmail);
  *                 example: 'juan@correo.com'
  *               password:
  *                 type: string
- *                 example: 'SuperSecreto123'
+ *                 example: 'MyNewPassword123'
  *     responses:
  *       200:
  *         description: Successful login

@@ -4,12 +4,18 @@ const { sendResponse } = require('../utils/response_util');
 const { isTokenBlacklisted } = require('../utils/token_blacklist');
 
 function verificarToken(req, res, next) {
-  const token = req.headers['authorization'];
-  if (!token) {
+  const authHeader = req.headers['authorization'];
+  if (!authHeader) {
     return sendResponse(res, 403, 'error', 'Acceso denegado, token requerido');
   }
 
-  // Comprobar si el token está en la Blacklist
+  const parts = authHeader.split(' ');
+  if (parts.length !== 2 || parts[0] !== 'Bearer') {
+    return sendResponse(res, 401, 'error', 'Formato de token inválido');
+  }
+
+  const token = parts[1];
+
   if (isTokenBlacklisted(token)) {
     return sendResponse(res, 401, 'error', 'Token inválido o cerrado (logout)');
   }
@@ -22,5 +28,6 @@ function verificarToken(req, res, next) {
     return sendResponse(res, 401, 'error', 'Token inválido');
   }
 }
+
 
 module.exports = { verificarToken };
