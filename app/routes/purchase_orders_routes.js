@@ -16,7 +16,7 @@ router.use(verificarToken);
 /**
  * @swagger
  * tags:
- *   name: PurchaseOrders
+ *   name: Purchase Orders
  *   description: Gestión de órdenes de compra
  */
 
@@ -25,7 +25,7 @@ router.use(verificarToken);
  * /purchase-orders:
  *   post:
  *     summary: Crear una nueva orden de compra
- *     tags: [PurchaseOrders]
+ *     tags: [Purchase Orders]
  *     security:
  *       - bearerAuth: []
  *     requestBody:
@@ -85,7 +85,7 @@ router.post('/', createOrder);
  * /purchase-orders:
  *   get:
  *     summary: Listar todas las órdenes de compra del usuario autenticado
- *     tags: [PurchaseOrders]
+ *     tags: [Purchase Orders]
  *     security:
  *       - bearerAuth: []
  *     responses:
@@ -107,7 +107,7 @@ router.get('/', listOrders);
  * /purchase-orders/{id}:
  *   get:
  *     summary: Obtener una orden de compra por ID
- *     tags: [PurchaseOrders]
+ *     tags: [Purchase Orders]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -136,7 +136,7 @@ router.get('/:id', getOrder);
  * /purchase-orders/{id}:
  *   put:
  *     summary: Actualizar orden de compra existente
- *     tags: [PurchaseOrders]
+ *     tags: [Purchase Orders]
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -203,7 +203,7 @@ router.put('/:id', updateOrder);
  * /purchase-orders/{id}:
  *   delete:
  *     summary: Eliminar una orden de compra
- *     tags: [PurchaseOrders]
+ *     tags: [Purchase Orders]
  *     security:
  *       - bearerAuth: []
  *     parameters:

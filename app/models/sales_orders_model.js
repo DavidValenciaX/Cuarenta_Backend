@@ -80,14 +80,66 @@ class SalesOrder {
   }
 
   // Update a sales order
-  static async update(id, { customerId, statusId, subtotal, totalAmount }, userId) {
-    const { rows } = await pool.query(
-      `UPDATE public.sales_orders
-       SET customer_id = $1, status_id = $2, subtotal = $3, total_amount = $4, updated_at = NOW()
-       WHERE id = $5 AND user_id = $6 RETURNING *`,
-      [customerId, statusId, subtotal, totalAmount, id, userId]
-    );
-    return rows[0];
+  static async update(id, { customerId, statusId, order_date, subtotal, totalAmount, items }, userId) {
+    const client = await pool.connect();
+    
+    try {
+      await client.query('BEGIN');
+      
+      // Build the update query based on whether order_date is provided
+      let updateQuery = `
+        UPDATE public.sales_orders
+        SET customer_id = $1, status_id = $2, subtotal = $3, total_amount = $4, updated_at = NOW()
+      `;
+      
+      const queryParams = [customerId, statusId, subtotal, totalAmount];
+      let paramIndex = 5;
+      
+      // Add order_date to the query if provided
+      if (order_date) {
+        updateQuery += `, order_date = $${paramIndex}`;
+        queryParams.push(order_date);
+        paramIndex++;
+      }
+      
+      updateQuery += ` WHERE id = $${paramIndex} AND user_id = $${paramIndex + 1} RETURNING *`;
+      queryParams.push(id, userId);
+      
+      const orderResult = await client.query(updateQuery, queryParams);
+      
+      if (orderResult.rows.length === 0) {
+        await client.query('ROLLBACK');
+        return null;
+      }
+      
+      const salesOrder = orderResult.rows[0];
+      
+      // If items are provided, update the order products
+      if (items && items.length > 0) {
+        // Remove all existing products for this order
+        await client.query(
+          `DELETE FROM public.sales_order_products WHERE sales_order_id = $1`,
+          [id]
+        );
+        
+        // Insert all new products
+        for (const item of items) {
+          await client.query(
+            `INSERT INTO public.sales_order_products(sales_order_id, product_id, quantity, unit_price)
+             VALUES($1, $2, $3, $4)`,
+            [id, item.productId, item.quantity, item.unitPrice]
+          );
+        }
+      }
+      
+      await client.query('COMMIT');
+      return salesOrder;
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
   }
 
   // Delete a sales order and its products (leveraging CASCADE)
@@ -99,106 +151,6 @@ class SalesOrder {
     return rows[0];
   }
 
-  // Add a product to an existing sales order
-  static async addProduct(salesOrderId, { productId, quantity, unitPrice }, userId) {
-    // First verify the sales order belongs to the user
-    const orderCheck = await pool.query(
-      `SELECT id FROM public.sales_orders WHERE id = $1 AND user_id = $2`,
-      [salesOrderId, userId]
-    );
-    
-    if (orderCheck.rows.length === 0) {
-      return null;
-    }
-    
-    const { rows } = await pool.query(
-      `INSERT INTO public.sales_order_products(sales_order_id, product_id, quantity, unit_price)
-       VALUES($1, $2, $3, $4)
-       ON CONFLICT (sales_order_id, product_id) 
-       DO UPDATE SET quantity = sales_order_products.quantity + $3, 
-                   unit_price = $4,
-                   updated_at = NOW() 
-       RETURNING *`,
-      [salesOrderId, productId, quantity, unitPrice]
-    );
-    return rows[0];
-  }
-
-  // Remove a product from a sales order
-  static async removeProduct(salesOrderId, productId, userId) {
-    // Verify the sales order belongs to the user
-    const orderCheck = await pool.query(
-      `SELECT id FROM public.sales_orders WHERE id = $1 AND user_id = $2`,
-      [salesOrderId, userId]
-    );
-    
-    if (orderCheck.rows.length === 0) {
-      return null;
-    }
-    
-    const { rows } = await pool.query(
-      `DELETE FROM public.sales_order_products 
-       WHERE sales_order_id = $1 AND product_id = $2 RETURNING *`,
-      [salesOrderId, productId]
-    );
-    return rows[0];
-  }
-
-  // Update a sales order product
-  static async updateProduct(salesOrderId, productId, { quantity, unitPrice }, userId) {
-    // Verify the sales order belongs to the user
-    const orderCheck = await pool.query(
-      `SELECT id FROM public.sales_orders WHERE id = $1 AND user_id = $2`,
-      [salesOrderId, userId]
-    );
-    
-    if (orderCheck.rows.length === 0) {
-      return null;
-    }
-    
-    const { rows } = await pool.query(
-      `UPDATE public.sales_order_products
-       SET quantity = $1, unit_price = $2, updated_at = NOW()
-       WHERE sales_order_id = $3 AND product_id = $4 RETURNING *`,
-      [quantity, unitPrice, salesOrderId, productId]
-    );
-    return rows[0];
-  }
-
-  // Process a product return
-  static async returnProducts(salesOrderId, productId, { returnedQuantity, returnReason }, userId) {
-    // Verify the sales order belongs to the user
-    const orderCheck = await pool.query(
-      `SELECT id FROM public.sales_orders WHERE id = $1 AND user_id = $2`,
-      [salesOrderId, userId]
-    );
-    
-    if (orderCheck.rows.length === 0) {
-      return null;
-    }
-    
-    const { rows } = await pool.query(
-      `UPDATE public.sales_order_products
-       SET returned_quantity = $1, return_reason = $2, return_date = NOW(), updated_at = NOW()
-       WHERE sales_order_id = $3 AND product_id = $4
-       RETURNING *`,
-      [returnedQuantity, returnReason, salesOrderId, productId]
-    );
-    return rows[0];
-  }
-  
-  // Get order status counts for a user
-  static async getStatusCounts(userId) {
-    const { rows } = await pool.query(
-      `SELECT st.name as status, COUNT(so.id) as count
-       FROM public.sales_orders so
-       JOIN public.status_types st ON so.status_id = st.id
-       WHERE so.user_id = $1
-       GROUP BY st.name`,
-      [userId]
-    );
-    return rows;
-  }
 }
 
 module.exports = SalesOrder;
