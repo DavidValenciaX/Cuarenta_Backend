@@ -58,13 +58,19 @@ router.use(verificarToken);
  *               unit_of_measure_id:
  *                 type: integer
  *                 example: 1
+ *               quantity:
+ *                 type: number
+ *                 example: 50
+ *               barcode:
+ *                 type: string
+ *                 example: "1234567890123"
  *     responses:
  *       201:
  *         description: Producto creado exitosamente
  *       400:
  *         description: Error de validación (campos requeridos o numéricos)
  *       409:
- *         description: "Conflicto: nombre duplicado"
+ *         description: "Conflicto: nombre o código de barras duplicado"
  *       401:
  *         description: Token inválido o expirado
  */
@@ -167,6 +173,12 @@ router.get('/:id', getProduct);
  *               unit_of_measure_id:
  *                 type: integer
  *                 example: 1
+ *               quantity:
+ *                 type: number
+ *                 example: 60
+ *               barcode:
+ *                 type: string
+ *                 example: "1234567890123"
  *     responses:
  *       200:
  *         description: Producto actualizado exitosamente
@@ -179,7 +191,7 @@ router.get('/:id', getProduct);
  *       404:
  *         description: Producto no encontrado
  *       409:
- *         description: "Conflicto: nombre duplicado"
+ *         description: "onflicto: nombre o código de barras duplicado"
  *       401:
  *         description: Token inválido o expirado
  */
