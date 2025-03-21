@@ -2,7 +2,7 @@ const pool = require('../config/data_base');
 
 class SalesOrder {
   // Create a sales order with its products
-  static async create({ userId, customerId, statusId, subtotal, totalAmount, products }) {
+  static async create({ userId, customerId, statusId, subtotal, totalAmount, notes, products }) {
     // Start a transaction
     const client = await pool.connect();
     
@@ -11,9 +11,9 @@ class SalesOrder {
       
       // Insert the sales order
       const orderResult = await client.query(
-        `INSERT INTO public.sales_orders(user_id, customer_id, status_id, subtotal, total_amount)
-         VALUES($1, $2, $3, $4, $5) RETURNING *`,
-        [userId, customerId, statusId, subtotal, totalAmount]
+        `INSERT INTO public.sales_orders(user_id, customer_id, status_id, subtotal, total_amount, notes)
+         VALUES($1, $2, $3, $4, $5, $6) RETURNING *`,
+        [userId, customerId, statusId, subtotal, totalAmount, notes]
       );
       
       const salesOrder = orderResult.rows[0];
@@ -80,7 +80,7 @@ class SalesOrder {
   }
 
   // Update a sales order
-  static async update(id, { customerId, statusId, order_date, subtotal, totalAmount, items }, userId) {
+  static async update(id, { customerId, statusId, order_date, subtotal, totalAmount, notes, items }, userId) {
     const client = await pool.connect();
     
     try {
@@ -89,11 +89,11 @@ class SalesOrder {
       // Build the update query based on whether order_date is provided
       let updateQuery = `
         UPDATE public.sales_orders
-        SET customer_id = $1, status_id = $2, subtotal = $3, total_amount = $4, updated_at = NOW()
+        SET customer_id = $1, status_id = $2, subtotal = $3, total_amount = $4, notes = $5, updated_at = NOW()
       `;
       
-      const queryParams = [customerId, statusId, subtotal, totalAmount];
-      let paramIndex = 5;
+      const queryParams = [customerId, statusId, subtotal, totalAmount, notes];
+      let paramIndex = 6;
       
       // Add order_date to the query if provided
       if (order_date) {

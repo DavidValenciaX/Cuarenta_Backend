@@ -6,7 +6,7 @@ const { sendResponse } = require('../utils/response_util');
 // Create a sales order with its products
 async function createSalesOrder(req, res) {
   try {
-    const { customerId, statusId, subtotal, totalAmount, products } = req.body;
+    const { customerId, statusId, subtotal, totalAmount, notes, products } = req.body;
     const userId = req.usuario.userId;
 
     // Validate required fields
@@ -39,6 +39,7 @@ async function createSalesOrder(req, res) {
       statusId,
       subtotal,
       totalAmount,
+      notes,
       products
     });
 
@@ -92,7 +93,7 @@ async function getSalesOrder(req, res) {
 async function updateSalesOrder(req, res) {
   try {
     const orderId = req.params.id;
-    const { customerId, statusId, order_date, items } = req.body;
+    const { customerId, statusId, order_date, notes, items } = req.body;
     const userId = req.usuario.userId;
 
     // Validate required fields
@@ -150,6 +151,7 @@ async function updateSalesOrder(req, res) {
       order_date,
       subtotal,
       totalAmount,
+      notes,
       items: formattedItems
     }, userId);
 

@@ -45,6 +45,9 @@ router.use(verificarToken);
  *                 type: string
  *                 format: date-time
  *                 example: '2025-03-21T10:00:00Z'
+ *               notes:
+ *                 type: string
+ *                 example: 'Pedido urgente para stock'
  *               items:
  *                 type: array
  *                 items:
@@ -163,6 +166,9 @@ router.get('/:id', getOrder);
  *               status_id:
  *                 type: integer
  *                 example: 2
+ *               notes:
+ *                 type: string
+ *                 example: 'Modificación de pedido por cambio de precios'
  *               purchase_order_date:
  *                 type: string
  *                 format: date-time

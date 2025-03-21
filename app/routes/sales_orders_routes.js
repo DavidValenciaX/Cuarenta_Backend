@@ -51,6 +51,9 @@ router.use(verificarToken);
  *               totalAmount:
  *                 type: number
  *                 example: 1190.00
+ *               notes:
+ *                 type: string
+ *                 example: "Entrega en horario de la tarde"
  *               products:
  *                 type: array
  *                 items:
@@ -153,6 +156,9 @@ router.get('/:id', getSalesOrder);
  *               statusId:
  *                 type: integer
  *                 example: 2
+ *               notes:
+ *                 type: string
+ *                 example: "Cliente solicita cambio de horario de entrega"
  *               order_date:
  *                 type: string
  *                 format: date-time

@@ -11,7 +11,7 @@ function toNumber(value) {
 
 async function createOrder(req, res) {
     const userId = req.usuario.userId;
-    const { supplier_id, status_id, purchase_order_date, items } = req.body;
+    const { supplier_id, status_id, purchase_order_date, notes, items } = req.body;
   
     if (!supplier_id || status_id == null || !Array.isArray(items) || items.length === 0) {
       return sendResponse(res, 400, 'error', 'supplier_id, status_id e items son requeridos');
@@ -45,7 +45,8 @@ async function createOrder(req, res) {
       status_id,
       subtotal,
       total_amount,
-      purchase_order_date: purchase_order_date || new Date()
+      purchase_order_date: purchase_order_date || new Date(),
+      notes
     });
 
     await PurchaseOrder.addProducts(client, order.id, items, userId);
@@ -74,7 +75,7 @@ async function getOrder(req, res) {
 async function updateOrder(req, res) {
     const userId = req.usuario.userId;
     const orderId = Number(req.params.id);
-    const { supplier_id, status_id, purchase_order_date, items } = req.body;
+    const { supplier_id, status_id, purchase_order_date, notes, items } = req.body;
   
     if (!supplier_id || status_id == null || !Array.isArray(items) || items.length === 0) {
       return sendResponse(res, 400, 'error', 'supplier_id, status_id e items son requeridos');
@@ -160,9 +161,9 @@ async function updateOrder(req, res) {
       const total_amount = subtotal;
       await client.query(
         `UPDATE public.purchase_orders
-           SET supplier_id = $1, status_id = $2, subtotal = $3, total_amount = $4, purchase_order_date = $5
-         WHERE id = $6 AND user_id = $7`,
-        [supplier_id, status_id, subtotal, total_amount, purchase_order_date || new Date(), orderId, userId]
+           SET supplier_id = $1, status_id = $2, subtotal = $3, total_amount = $4, purchase_order_date = $5, notes = $6
+         WHERE id = $7 AND user_id = $8`,
+        [supplier_id, status_id, subtotal, total_amount, purchase_order_date || new Date(), notes, orderId, userId]
       );
   
       await client.query('COMMIT');

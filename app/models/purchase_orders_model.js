@@ -46,25 +46,25 @@ class PurchaseOrder {
       }
       
     
-    static async createOrder(client, { userId, supplier_id, status_id, subtotal, total_amount, purchase_order_date }) {
+    static async createOrder(client, { userId, supplier_id, status_id, subtotal, total_amount, purchase_order_date, notes }) {
         const { rows } = await client.query(
-          `INSERT INTO public.purchase_orders(user_id, supplier_id, status_id, subtotal, total_amount, purchase_order_date)
-           VALUES ($1, $2, $3, $4, $5, $6)
+          `INSERT INTO public.purchase_orders(user_id, supplier_id, status_id, subtotal, total_amount, purchase_order_date, notes)
+           VALUES ($1, $2, $3, $4, $5, $6, $7)
            RETURNING *`,
-          [userId, supplier_id, status_id, subtotal, total_amount, purchase_order_date]
+          [userId, supplier_id, status_id, subtotal, total_amount, purchase_order_date, notes]
         );
         return rows[0];
       }
       
     
-  static async create({ supplier_id, status_id = null, purchase_order_date = null, products, userId }) {
+  static async create({ supplier_id, status_id = null, purchase_order_date = null, notes = null, products, userId }) {
     const client = await pool.connect();
     try {
       await client.query('BEGIN');
       const { rows } = await client.query(
-        `INSERT INTO public.purchase_orders(user_id, supplier_id, status_id, purchase_order_date)
-         VALUES($1,$2,$3,COALESCE($4,NOW())) RETURNING *`,
-        [userId, supplier_id, status_id, purchase_order_date]
+        `INSERT INTO public.purchase_orders(user_id, supplier_id, status_id, purchase_order_date, notes)
+         VALUES($1,$2,$3,COALESCE($4,NOW()),$5) RETURNING *`,
+        [userId, supplier_id, status_id, purchase_order_date, notes]
       );
       const order = rows[0];
 
@@ -120,7 +120,7 @@ class PurchaseOrder {
     return rows[0];
   }
 
-  static async update({ id, supplier_id, status_id = null, purchase_order_date = null, products, userId }) {
+  static async update({ id, supplier_id, status_id = null, purchase_order_date = null, notes = null, products, userId }) {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
@@ -148,9 +148,9 @@ class PurchaseOrder {
     // Actualizar cabecera de orden
     const { rows } = await client.query(
       `UPDATE public.purchase_orders
-         SET supplier_id=$1, status_id=$2, purchase_order_date=COALESCE($3,NOW()), updated_at=NOW()
-       WHERE id=$4 AND user_id=$5 RETURNING *`,
-      [supplier_id, status_id, purchase_order_date, id, userId]
+         SET supplier_id=$1, status_id=$2, purchase_order_date=COALESCE($3,NOW()), notes=$4, updated_at=NOW()
+       WHERE id=$5 AND user_id=$6 RETURNING *`,
+      [supplier_id, status_id, purchase_order_date, notes, id, userId]
     );
     const order = rows[0];
 
