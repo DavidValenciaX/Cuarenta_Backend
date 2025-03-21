@@ -83,11 +83,12 @@ class SalesOrder {
   }
 
   // Update a sales order
-  static async update(id, { customerId, statusId, order_date, subtotal, totalAmount, notes, items }, userId) {
-    const client = await pool.connect();
+  static async update(id, { customerId, statusId, order_date, subtotal, totalAmount, notes, items }, userId, client = null) {
+    const shouldReleaseClient = !client;
+    const dbClient = client || await pool.connect();
     
     try {
-      await client.query('BEGIN');
+      if (!client) await dbClient.query('BEGIN');
       
       // Build the update query based on whether order_date is provided
       let updateQuery = `
@@ -108,10 +109,10 @@ class SalesOrder {
       updateQuery += ` WHERE id = $${paramIndex} AND user_id = $${paramIndex + 1} RETURNING *`;
       queryParams.push(id, userId);
       
-      const orderResult = await client.query(updateQuery, queryParams);
+      const orderResult = await dbClient.query(updateQuery, queryParams);
       
       if (orderResult.rows.length === 0) {
-        await client.query('ROLLBACK');
+        if (!client) await dbClient.query('ROLLBACK');
         return null;
       }
       
@@ -120,14 +121,14 @@ class SalesOrder {
       // If items are provided, update the order products
       if (items && items.length > 0) {
         // Remove all existing products for this order
-        await client.query(
+        await dbClient.query(
           `DELETE FROM public.sales_order_products WHERE sales_order_id = $1`,
           [id]
         );
         
         // Insert all new products
         for (const item of items) {
-          await client.query(
+          await dbClient.query(
             `INSERT INTO public.sales_order_products(sales_order_id, product_id, quantity, unit_price)
              VALUES($1, $2, $3, $4)`,
             [id, item.productId, item.quantity, item.unitPrice]
@@ -135,13 +136,15 @@ class SalesOrder {
         }
       }
       
-      await client.query('COMMIT');
+      if (!client) await dbClient.query('COMMIT');
       return salesOrder;
     } catch (error) {
-      await client.query('ROLLBACK');
+      if (!client) await dbClient.query('ROLLBACK');
       throw error;
     } finally {
-      client.release();
+      if (shouldReleaseClient) {
+        dbClient.release();
+      }
     }
   }
 

@@ -125,7 +125,12 @@ async function getSalesOrder(req, res) {
 
 // Update a sales order
 async function updateSalesOrder(req, res) {
+  // Get a client for transaction management
+  const client = await pool.connect();
+  
   try {
+    await client.query('BEGIN');
+    
     const orderId = req.params.id;
     const { customerId, statusId, order_date, notes, items } = req.body;
     const userId = req.usuario.userId;
@@ -138,14 +143,28 @@ async function updateSalesOrder(req, res) {
     // Validate customer belongs to user
     const customer = await Customer.findById(customerId, userId);
     if (!customer) {
+      await client.query('ROLLBACK');
       return sendResponse(res, 404, 'error', 'Cliente no encontrado o no pertenece al usuario');
     }
 
     // Validate the order exists
     const existingOrder = await SalesOrder.findById(orderId, userId);
     if (!existingOrder) {
+      await client.query('ROLLBACK');
       return sendResponse(res, 404, 'error', 'Orden de venta no encontrada');
     }
+
+    // Get existing products for this order to calculate inventory changes
+    const existingProducts = await SalesOrder.getProducts(orderId, userId);
+    
+    // Create a map of existing products for easier comparison
+    const existingProductsMap = {};
+    existingProducts.forEach(product => {
+      existingProductsMap[product.product_id] = {
+        quantity: product.quantity,
+        productId: product.product_id
+      };
+    });
 
     // Calculate subtotal and totalAmount if items are provided
     let subtotal = existingOrder.subtotal;
@@ -155,19 +174,34 @@ async function updateSalesOrder(req, res) {
       // Validate all products belong to user
       for (const item of items) {
         if (!item.product_id || !item.quantity || !item.unit_price) {
+          await client.query('ROLLBACK');
           return sendResponse(res, 400, 'error', 'Cada producto debe tener ID, cantidad y precio unitario');
         }
         
         const productExists = await Product.findById(item.product_id, userId);
         if (!productExists) {
+          await client.query('ROLLBACK');
           return sendResponse(res, 404, 'error', `Producto con ID ${item.product_id} no encontrado o no pertenece al usuario`);
+        }
+        
+        // Check inventory for increased quantities
+        const existingQty = existingProductsMap[item.product_id] ? existingProductsMap[item.product_id].quantity : 0;
+        const qtyDifference = item.quantity - existingQty;
+        
+        if (qtyDifference > 0) {
+          // Need to check if we have enough inventory for the increased amount
+          const hasSufficientStock = await Product.hasSufficientStock(item.product_id, qtyDifference, userId);
+          if (!hasSufficientStock) {
+            await client.query('ROLLBACK');
+            return sendResponse(res, 400, 'error', `Producto con ID ${item.product_id} no tiene suficiente stock disponible para el incremento solicitado`);
+          }
         }
       }
 
       // Calculate new subtotal from items
       subtotal = items.reduce((sum, item) => sum + (item.quantity * item.unit_price), 0);
       
-      // Apply simple tax calculation (19% VAT) - this should be configured or calculated properly
+      // Apply simple tax calculation (19% VAT)
       totalAmount = subtotal * 1.19;
     }
 
@@ -187,12 +221,43 @@ async function updateSalesOrder(req, res) {
       totalAmount,
       notes,
       items: formattedItems
-    }, userId);
+    }, userId, client);
+    
+    // Process inventory adjustments for each product
+    
+    // First, handle items that were in the original order but are removed or changed
+    for (const productId in existingProductsMap) {
+      const existingQty = existingProductsMap[productId].quantity;
+      const newItem = items ? items.find(item => item.product_id == productId) : null;
+      const newQty = newItem ? newItem.quantity : 0;
+      
+      // Calculate the difference in quantity (negative means we need to return stock)
+      const qtyDifference = newQty - existingQty;
+      
+      if (qtyDifference !== 0) {
+        // Update product stock (negative value decreases stock, positive increases)
+        await Product.updateStock(productId, -qtyDifference, userId, client);
+      }
+    }
+    
+    // Now handle any new items that weren't in the original order
+    if (items && Array.isArray(items)) {
+      for (const item of items) {
+        if (!existingProductsMap[item.product_id]) {
+          // This is a new product, so decrease its stock by the full quantity
+          await Product.updateStock(item.product_id, -item.quantity, userId, client);
+        }
+      }
+    }
 
+    await client.query('COMMIT');
     return sendResponse(res, 200, 'success', 'Orden de venta actualizada', updated);
   } catch (error) {
+    await client.query('ROLLBACK');
     console.error('Error al actualizar orden de venta:', error);
     return sendResponse(res, 500, 'error', 'Error interno del servidor');
+  } finally {
+    client.release();
   }
 }
 
