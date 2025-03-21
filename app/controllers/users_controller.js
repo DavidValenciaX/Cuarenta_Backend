@@ -5,6 +5,8 @@ const { validateEmail, validatePhone } = require('../utils/validate_util');
 const { sendResponse } = require('../utils/response_util');
 const { generateToken } = require('../utils/generate_token');
 const { addToBlacklist} = require('../utils/token_blacklist');
+const { sendEmail } = require('../utils/email_util');
+const { getConfirmationEmailTemplate, getRecoveryEmailTemplate } = require('../utils/email_templates');
 
 const jwt = require('jsonwebtoken'); 
 
@@ -45,7 +47,14 @@ async function createUser(req, res) {
       fullName, companyName, passwordHash, email, phone, confirmationTokenHash, confirmationTokenExpiration
     });
 
-    return sendResponse(res, 201, 'success', 'Usuario creado exitosamente', {
+    await sendEmail(
+      email,
+      'Confirma tu cuenta ',
+      getConfirmationEmailTemplate(fullName, confirmationTokenHash)
+    );
+    
+
+    return sendResponse(res, 201, 'success', 'Usuario creado, código de confirmación enviado al correo', {
         userId: newUser.id
       });
     } catch (error) {
@@ -70,7 +79,7 @@ async function confirmEmail(req, res) {
   
       const now = moment().tz('America/Bogota');
       if (moment(user.confirmation_token_expiration).isBefore(now)) {
-        // Token vencido -> Generar uno nuevo + reenvío
+        // Token vencido -> Generar uno nuevo  reenvío
         const newToken = generateToken();
         const newExpiration = moment().tz('America/Bogota').add(1, 'hour').format();
         await User.updateConfirmationToken(user.id, newToken, newExpiration);
@@ -174,9 +183,12 @@ async function logoutUser(req, res) {
       // Guardar en DB
       await User.updateResetToken(user.id, resetTokenHash, resetTokenExpiration);
   
-      // (Opcional) Enviar correo con el token al usuario.
-      // sendEmail(user.email, resetTokenHash);
-  
+      await sendEmail(
+        email,
+        'Recupera tu contraseña',
+        getRecoveryEmailTemplate(user.full_name || email, resetTokenHash)
+      );
+      
       return sendResponse(res, 200, 'success', 'Código de recuperacion enviado exitosamente', {
         resetTokenHash,
         resetTokenExpiration

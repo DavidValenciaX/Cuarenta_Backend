@@ -6,6 +6,7 @@
     "express-oas-generator": "^1.0.46",
     "jsonwebtoken": "^9.0.2",
     "moment-timezone": "^0.5.47",
+    "nodemailer": "^6.10.0",
     "pg": "^8.14.1",
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-express": "^5.0.1"
