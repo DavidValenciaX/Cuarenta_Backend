@@ -2,7 +2,7 @@ const pool = require('../config/data_base');
 
 class SalesOrder {
   // Create a sales order with its products
-  static async create({ userId, customerId, statusId, subtotal, totalAmount, notes, products, client }) {
+  static async create({ userId, customerId, statusId, subtotal, totalAmount, notes, items, order_date, client }) {
     // Start a transaction if no client is provided
     const shouldReleaseClient = !client;
     const dbClient = client || await pool.connect();
@@ -12,16 +12,16 @@ class SalesOrder {
       
       // Insert the sales order
       const orderResult = await dbClient.query(
-        `INSERT INTO public.sales_orders(user_id, customer_id, status_id, subtotal, total_amount, notes)
-         VALUES($1, $2, $3, $4, $5, $6) RETURNING *`,
-        [userId, customerId, statusId, subtotal, totalAmount, notes]
+        `INSERT INTO public.sales_orders(user_id, customer_id, status_id, subtotal, total_amount, notes, order_date)
+         VALUES($1, $2, $3, $4, $5, $6, COALESCE($7, NOW())) RETURNING *`,
+        [userId, customerId, statusId, subtotal, totalAmount, notes, order_date]
       );
       
       const salesOrder = orderResult.rows[0];
       
       // Insert all the sales order products
-      if (products && products.length > 0) {
-        for (const product of products) {
+      if (items && items.length > 0) {
+        for (const product of items) {
           await dbClient.query(
             `INSERT INTO public.sales_order_products(sales_order_id, product_id, quantity, unit_price)
              VALUES($1, $2, $3, $4)`,

@@ -42,7 +42,7 @@ router.use(verificarToken);
  *           type: string
  *           format: date-time
  *           description: Fecha y hora de la orden
- *         products:
+ *         items:
  *           type: array
  *           items:
  *             type: object
@@ -82,7 +82,7 @@ router.use(verificarToken);
  *             required:
  *               - customerId
  *               - statusId
- *               - products
+ *               - items
  *             properties:
  *               customerId:
  *                 type: integer
@@ -90,10 +90,14 @@ router.use(verificarToken);
  *               statusId:
  *                 type: integer
  *                 example: 1
+ *               order_date:
+ *                 type: string
+ *                 format: date-time
+ *                 example: "2023-06-15T10:00:00Z"
  *               notes:
  *                 type: string
  *                 example: "Entrega en horario de la tarde"
- *               products:
+ *               items:
  *                 type: array
  *                 items:
  *                   type: object

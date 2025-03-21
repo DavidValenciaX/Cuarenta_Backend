@@ -12,11 +12,11 @@ async function createSalesOrder(req, res) {
   try {
     await client.query('BEGIN');
     
-    const { customerId, statusId, notes, products } = req.body;
+    const { customerId, statusId, notes, items, order_date } = req.body;
     const userId = req.usuario.userId;
 
     // Validate required fields
-    if (!customerId || !statusId || !products || !Array.isArray(products) || products.length === 0) {
+    if (!customerId || !statusId || !items || !Array.isArray(items) || items.length === 0) {
       return sendResponse(res, 400, 'error', 'Cliente, estado y al menos un producto son requeridos');
     }
 
@@ -29,7 +29,7 @@ async function createSalesOrder(req, res) {
     // Validate all products belong to user and have sufficient stock
     // Calculate subtotal while validating products
     let subtotal = 0;
-    for (const product of products) {
+    for (const product of items) {
       if (!product.productId || !product.quantity || !product.unitPrice) {
         await client.query('ROLLBACK');
         return sendResponse(res, 400, 'error', 'Cada producto debe tener ID, cantidad y precio unitario');
@@ -63,12 +63,13 @@ async function createSalesOrder(req, res) {
       subtotal,
       totalAmount,
       notes,
-      products,
+      items,
+      order_date,
       client // Pass the client to use the same transaction
     });
 
     // Update product stock quantities
-    for (const product of products) {
+    for (const product of items) {
       // Subtract quantity (passing negative value to decrease stock)
       await Product.updateStock(product.productId, -product.quantity, userId, client);
     }
