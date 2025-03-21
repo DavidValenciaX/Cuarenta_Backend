@@ -13,6 +13,37 @@ router.use(verificarToken);
 
 /**
  * @swagger
+ * components:
+ *   schemas:
+ *     Supplier:
+ *       type: object
+ *       properties:
+ *         id:
+ *           type: integer
+ *           description: ID del proveedor
+ *         name:
+ *           type: string
+ *           description: Nombre del proveedor
+ *         email:
+ *           type: string
+ *           format: email
+ *           description: Correo electrónico del proveedor
+ *         phone:
+ *           type: string
+ *           description: Número telefónico del proveedor
+ *         address:
+ *           type: string
+ *           description: Dirección del proveedor
+ *         notes:
+ *           type: string
+ *           description: Notas adicionales
+ *         user_id:
+ *           type: integer
+ *           description: ID del usuario propietario
+ */
+
+/**
+ * @swagger
  * tags:
  *   name: Suppliers
  *   description: CRUD de proveedores asociados al usuario autenticado

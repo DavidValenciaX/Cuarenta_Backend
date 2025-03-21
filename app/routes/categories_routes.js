@@ -13,6 +13,24 @@ router.use(verificarToken);
 
 /**
  * @swagger
+ * components:
+ *   schemas:
+ *     Category:
+ *       type: object
+ *       properties:
+ *         id:
+ *           type: integer
+ *           description: ID de la categoría
+ *         name:
+ *           type: string
+ *           description: Nombre de la categoría
+ *         user_id:
+ *           type: integer
+ *           description: ID del usuario propietario
+ */
+
+/**
+ * @swagger
  * tags:
  *   name: Categories
  *   description: CRUD de categorías del usuario autenticado

@@ -7,6 +7,51 @@ router.use(verificarToken);
 
 /**
  * @swagger
+ * components:
+ *   schemas:
+ *     Product:
+ *       type: object
+ *       properties:
+ *         id:
+ *           type: integer
+ *           description: ID del producto
+ *         name:
+ *           type: string
+ *           description: Nombre del producto
+ *         description:
+ *           type: string
+ *           description: Descripción del producto
+ *         unit_price:
+ *           type: number
+ *           description: Precio de venta por unidad
+ *         unit_cost:
+ *           type: number
+ *           description: Costo por unidad
+ *         supplier_id:
+ *           type: integer
+ *           description: ID del proveedor
+ *         image_url:
+ *           type: string
+ *           description: URL de la imagen del producto
+ *         category_id:
+ *           type: integer
+ *           description: ID de la categoría
+ *         unit_of_measure_id:
+ *           type: integer
+ *           description: ID de la unidad de medida
+ *         quantity:
+ *           type: number
+ *           description: Cantidad en inventario
+ *         barcode:
+ *           type: string
+ *           description: Código de barras
+ *         user_id:
+ *           type: integer
+ *           description: ID del usuario propietario
+ */
+
+/**
+ * @swagger
  * tags:
  *   name: Products
  *   description: CRUD de productos del usuario autenticado

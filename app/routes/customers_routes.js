@@ -13,6 +13,34 @@ router.use(verificarToken);
 
 /**
  * @swagger
+ * components:
+ *   schemas:
+ *     Customer:
+ *       type: object
+ *       properties:
+ *         id:
+ *           type: integer
+ *           description: ID del cliente
+ *         name:
+ *           type: string
+ *           description: Nombre del cliente
+ *         email:
+ *           type: string
+ *           format: email
+ *           description: Correo electrónico del cliente
+ *         phone:
+ *           type: string
+ *           description: Número telefónico del cliente
+ *         address:
+ *           type: string
+ *           description: Dirección del cliente
+ *         user_id:
+ *           type: integer
+ *           description: ID del usuario propietario
+ */
+
+/**
+ * @swagger
  * tags:
  *   name: Customers
  *   description: CRUD de clientes asociados al usuario autenticado

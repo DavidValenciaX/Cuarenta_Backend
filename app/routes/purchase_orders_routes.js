@@ -15,6 +15,45 @@ router.use(verificarToken);
 
 /**
  * @swagger
+ * components:
+ *   schemas:
+ *     PurchaseOrder:
+ *       type: object
+ *       properties:
+ *         id:
+ *           type: integer
+ *           description: ID de la orden de compra
+ *         supplier_id:
+ *           type: integer
+ *           description: ID del proveedor
+ *         purchase_order_date:
+ *           type: string
+ *           format: date-time
+ *           description: Fecha y hora de la orden
+ *         status_id:
+ *           type: integer
+ *           description: Estado de la orden
+ *         notes:
+ *           type: string
+ *           description: Notas adicionales
+ *         items:
+ *           type: array
+ *           items:
+ *             type: object
+ *             properties:
+ *               id:
+ *                 type: integer
+ *               product_id:
+ *                 type: integer
+ *               quantity:
+ *                 type: integer
+ *               unit_price:
+ *                 type: number
+ *                 format: decimal
+ */
+
+/**
+ * @swagger
  * tags:
  *   name: Purchase Orders
  *   description: Gestión de órdenes de compra

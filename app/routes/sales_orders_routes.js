@@ -13,6 +13,53 @@ router.use(verificarToken);
 
 /**
  * @swagger
+ * components:
+ *   schemas:
+ *     SalesOrder:
+ *       type: object
+ *       properties:
+ *         id:
+ *           type: integer
+ *           description: ID de la orden de venta
+ *         customerId:
+ *           type: integer
+ *           description: ID del cliente
+ *         statusId:
+ *           type: integer
+ *           description: Estado de la orden
+ *         subtotal:
+ *           type: number
+ *           format: decimal
+ *           description: Subtotal de la orden
+ *         totalAmount:
+ *           type: number
+ *           format: decimal
+ *           description: Monto total de la orden
+ *         notes:
+ *           type: string
+ *           description: Notas adicionales
+ *         order_date:
+ *           type: string
+ *           format: date-time
+ *           description: Fecha y hora de la orden
+ *         products:
+ *           type: array
+ *           items:
+ *             type: object
+ *             properties:
+ *               id:
+ *                 type: integer
+ *               productId:
+ *                 type: integer
+ *               quantity:
+ *                 type: integer
+ *               unitPrice:
+ *                 type: number
+ *                 format: decimal
+ */
+
+/**
+ * @swagger
  * tags:
  *   name: Sales Orders
  *   description: Gestión de órdenes de venta y sus productos
@@ -95,6 +142,12 @@ router.post('/', createSalesOrder);
  *     responses:
  *       200:
  *         description: Lista de órdenes de venta
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/SalesOrder'
  *       401:
  *         description: Token inválido o expirado
  */
@@ -118,6 +171,10 @@ router.get('/', listSalesOrders);
  *     responses:
  *       200:
  *         description: Orden de venta encontrada con sus productos
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/SalesOrder'
  *       401:
  *         description: Token inválido o expirado
  *       404:
