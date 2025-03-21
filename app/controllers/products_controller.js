@@ -11,26 +11,25 @@ async function createProduct(req, res) {
   let {
     name, description,
     unit_price, unit_cost,
-    supplier_id, image_url,
+    image_url,
     category_id, unit_of_measure_id,
     quantity, barcode
   } = req.body;
   const userId = req.usuario.userId;
 
   // Campos requeridos
-  if (!name || unit_price == null || unit_cost == null || !supplier_id || !category_id || !unit_of_measure_id) {
+  if (!name || unit_price == null || unit_cost == null || !category_id || !unit_of_measure_id) {
     return sendResponse(res, 400, 'error', 'Faltan campos requeridos');
   }
 
   // Convertir y validar numéricos
   unit_price = Number(unit_price);
   unit_cost = Number(unit_cost);
-  supplier_id = Number(supplier_id);
   category_id = Number(category_id);
   unit_of_measure_id = Number(unit_of_measure_id);
   quantity = quantity == null ? 0 : Number(quantity);
 
-  if ([unit_price, unit_cost, supplier_id, category_id, unit_of_measure_id, quantity]
+  if ([unit_price, unit_cost, category_id, unit_of_measure_id, quantity]
       .some(v => isNaN(v))) {
     return sendResponse(res, 400, 'error', 'Los campos numéricos deben ser válidos');
   }
@@ -57,13 +56,10 @@ async function createProduct(req, res) {
   if (!await Category.findById(category_id, userId)) {
     return sendResponse(res, 404, 'error', 'Categoría no encontrada');
   }
-  if (!await Supplier.findById(supplier_id, userId)) {
-    return sendResponse(res, 404, 'error', 'Proveedor no encontrado');
-  }
 
   const product = await Product.create({
     name, description, unit_price, unit_cost,
-    supplier_id, image_url, category_id,
+    image_url, category_id,
     unit_of_measure_id, quantity, barcode, userId
   });
   return sendResponse(res, 201, 'success', 'Producto creado', product);
@@ -74,24 +70,23 @@ async function updateProduct(req, res) {
   let {
     name, description,
     unit_price, unit_cost,
-    supplier_id, image_url,
+    image_url,
     category_id, unit_of_measure_id,
     quantity, barcode
   } = req.body;
   const userId = req.usuario.userId;
 
-  if (!name || unit_price == null || unit_cost == null || !supplier_id || !category_id || !unit_of_measure_id) {
+  if (!name || unit_price == null || unit_cost == null || !category_id || !unit_of_measure_id) {
     return sendResponse(res, 400, 'error', 'Faltan campos requeridos');
   }
 
   unit_price = Number(unit_price);
   unit_cost = Number(unit_cost);
-  supplier_id = Number(supplier_id);
   category_id = Number(category_id);
   unit_of_measure_id = Number(unit_of_measure_id);
   quantity = quantity == null ? 0 : Number(quantity);
 
-  if ([unit_price, unit_cost, supplier_id, category_id, unit_of_measure_id, quantity]
+  if ([unit_price, unit_cost, category_id, unit_of_measure_id, quantity]
       .some(v => isNaN(v))) {
     return sendResponse(res, 400, 'error', 'Los campos numéricos deben ser válidos');
   }
@@ -100,8 +95,6 @@ async function updateProduct(req, res) {
   
   barcode = typeof barcode === 'string' ? barcode.trim() : String(barcode || '').trim();
   if (barcode === '') barcode = null;
-
-
 
   const existingByName = await Product.findByNameAndUser(name, userId);
   if (existingByName && existingByName.id !== id) {
@@ -116,13 +109,10 @@ async function updateProduct(req, res) {
   if (!await Category.findById(category_id, userId)) {
     return sendResponse(res, 404, 'error', 'Categoría no encontrada');
   }
-  if (!await Supplier.findById(supplier_id, userId)) {
-    return sendResponse(res, 404, 'error', 'Proveedor no encontrado');
-  }
 
   const updated = await Product.update(id, {
     name, description, unit_price, unit_cost,
-    supplier_id, image_url, category_id,
+    image_url, category_id,
     unit_of_measure_id, quantity, barcode
   }, userId);
 

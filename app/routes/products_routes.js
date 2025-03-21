@@ -27,9 +27,6 @@ router.use(verificarToken);
  *         unit_cost:
  *           type: number
  *           description: Costo por unidad
- *         supplier_id:
- *           type: integer
- *           description: ID del proveedor
  *         image_url:
  *           type: string
  *           description: URL de la imagen del producto
@@ -75,7 +72,6 @@ router.use(verificarToken);
  *               - name
  *               - unit_price
  *               - unit_cost
- *               - supplier_id
  *               - category_id
  *               - unit_of_measure_id
  *             properties:
@@ -91,9 +87,6 @@ router.use(verificarToken);
  *               unit_cost:
  *                 type: number
  *                 example: 80.00
- *               supplier_id:
- *                 type: integer
- *                 example: 1
  *               image_url:
  *                 type: string
  *                 example: "http://ejemplo.com/imagen.jpg"
@@ -206,9 +199,6 @@ router.get('/:id', getProduct);
  *               unit_cost:
  *                 type: number
  *                 example: 90.00
- *               supplier_id:
- *                 type: integer
- *                 example: 1
  *               image_url:
  *                 type: string
  *                 example: "http://ejemplo.com/nueva_imagen.jpg"
