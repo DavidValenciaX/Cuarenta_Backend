@@ -2,16 +2,22 @@ const SalesOrder = require('../models/sales_orders_model');
 const Customer = require('../models/customers_model');
 const Product = require('../models/products_model');
 const { sendResponse } = require('../utils/response_util');
+const pool = require('../config/data_base');
 
 // Create a sales order with its products
 async function createSalesOrder(req, res) {
+  // Get a client for transaction management
+  const client = await pool.connect();
+  
   try {
-    const { customerId, statusId, subtotal, totalAmount, notes, products } = req.body;
+    await client.query('BEGIN');
+    
+    const { customerId, statusId, notes, products } = req.body;
     const userId = req.usuario.userId;
 
     // Validate required fields
-    if (!customerId || !statusId || subtotal === undefined || totalAmount === undefined || !products || !Array.isArray(products) || products.length === 0) {
-      return sendResponse(res, 400, 'error', 'Todos los campos son requeridos y debe incluir al menos un producto');
+    if (!customerId || !statusId || !products || !Array.isArray(products) || products.length === 0) {
+      return sendResponse(res, 400, 'error', 'Cliente, estado y al menos un producto son requeridos');
     }
 
     // Validate customer belongs to user
@@ -20,17 +26,34 @@ async function createSalesOrder(req, res) {
       return sendResponse(res, 404, 'error', 'Cliente no encontrado o no pertenece al usuario');
     }
 
-    // Validate all products belong to user
+    // Validate all products belong to user and have sufficient stock
+    // Calculate subtotal while validating products
+    let subtotal = 0;
     for (const product of products) {
       if (!product.productId || !product.quantity || !product.unitPrice) {
+        await client.query('ROLLBACK');
         return sendResponse(res, 400, 'error', 'Cada producto debe tener ID, cantidad y precio unitario');
       }
       
       const productExists = await Product.findById(product.productId, userId);
       if (!productExists) {
+        await client.query('ROLLBACK');
         return sendResponse(res, 404, 'error', `Producto con ID ${product.productId} no encontrado o no pertenece al usuario`);
       }
+      
+      // Check if product has sufficient stock
+      const hasSufficientStock = await Product.hasSufficientStock(product.productId, product.quantity, userId);
+      if (!hasSufficientStock) {
+        await client.query('ROLLBACK');
+        return sendResponse(res, 400, 'error', `Producto con ID ${product.productId} no tiene suficiente stock disponible`);
+      }
+
+      // Add to subtotal
+      subtotal += product.quantity * product.unitPrice;
     }
+
+    // Calculate total amount (including tax)
+    const totalAmount = subtotal * 1.19; // Assuming 19% tax rate
 
     // Create the sales order with its products
     const salesOrder = await SalesOrder.create({
@@ -40,13 +63,24 @@ async function createSalesOrder(req, res) {
       subtotal,
       totalAmount,
       notes,
-      products
+      products,
+      client // Pass the client to use the same transaction
     });
 
+    // Update product stock quantities
+    for (const product of products) {
+      // Subtract quantity (passing negative value to decrease stock)
+      await Product.updateStock(product.productId, -product.quantity, userId, client);
+    }
+
+    await client.query('COMMIT');
     return sendResponse(res, 201, 'success', 'Orden de venta creada exitosamente', salesOrder);
   } catch (error) {
+    await client.query('ROLLBACK');
     console.error('Error al crear orden de venta:', error);
     return sendResponse(res, 500, 'error', 'Error interno del servidor');
+  } finally {
+    client.release();
   }
 }
 

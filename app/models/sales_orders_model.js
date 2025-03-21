@@ -2,15 +2,16 @@ const pool = require('../config/data_base');
 
 class SalesOrder {
   // Create a sales order with its products
-  static async create({ userId, customerId, statusId, subtotal, totalAmount, notes, products }) {
-    // Start a transaction
-    const client = await pool.connect();
+  static async create({ userId, customerId, statusId, subtotal, totalAmount, notes, products, client }) {
+    // Start a transaction if no client is provided
+    const shouldReleaseClient = !client;
+    const dbClient = client || await pool.connect();
     
     try {
-      await client.query('BEGIN');
+      if (!client) await dbClient.query('BEGIN');
       
       // Insert the sales order
-      const orderResult = await client.query(
+      const orderResult = await dbClient.query(
         `INSERT INTO public.sales_orders(user_id, customer_id, status_id, subtotal, total_amount, notes)
          VALUES($1, $2, $3, $4, $5, $6) RETURNING *`,
         [userId, customerId, statusId, subtotal, totalAmount, notes]
@@ -21,7 +22,7 @@ class SalesOrder {
       // Insert all the sales order products
       if (products && products.length > 0) {
         for (const product of products) {
-          await client.query(
+          await dbClient.query(
             `INSERT INTO public.sales_order_products(sales_order_id, product_id, quantity, unit_price)
              VALUES($1, $2, $3, $4)`,
             [salesOrder.id, product.productId, product.quantity, product.unitPrice]
@@ -29,13 +30,15 @@ class SalesOrder {
         }
       }
       
-      await client.query('COMMIT');
+      if (!client) await dbClient.query('COMMIT');
       return salesOrder;
     } catch (error) {
-      await client.query('ROLLBACK');
+      if (!client) await dbClient.query('ROLLBACK');
       throw error;
     } finally {
-      client.release();
+      if (shouldReleaseClient) {
+        dbClient.release();
+      }
     }
   }
 

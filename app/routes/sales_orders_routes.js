@@ -82,8 +82,6 @@ router.use(verificarToken);
  *             required:
  *               - customerId
  *               - statusId
- *               - subtotal
- *               - totalAmount
  *               - products
  *             properties:
  *               customerId:
@@ -92,12 +90,6 @@ router.use(verificarToken);
  *               statusId:
  *                 type: integer
  *                 example: 1
- *               subtotal:
- *                 type: number
- *                 example: 1000.00
- *               totalAmount:
- *                 type: number
- *                 example: 1190.00
  *               notes:
  *                 type: string
  *                 example: "Entrega en horario de la tarde"

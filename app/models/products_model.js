@@ -73,6 +73,44 @@ class Product {
     );
     return rows[0];
   }
+
+  // Update product stock quantity
+  static async updateStock(productId, quantityChange, userId, client = null) {
+    // If no client is provided, use the pool directly (and manage our own connection)
+    const shouldReleaseClient = !client;
+    const dbClient = client || await pool.connect();
+    
+    try {
+      const result = await dbClient.query(
+        `UPDATE public.products 
+         SET quantity = quantity + $1, updated_at = NOW()
+         WHERE id = $2 AND user_id = $3
+         RETURNING *`,
+        [quantityChange, productId, userId]
+      );
+      
+      return result.rows[0];
+    } catch (error) {
+      throw error;
+    } finally {
+      // Only release the client if we created it in this method
+      if (shouldReleaseClient && dbClient) {
+        dbClient.release();
+      }
+    }
+  }
+
+  // Check if product has sufficient stock
+  static async hasSufficientStock(productId, requiredQuantity, userId) {
+    const { rows } = await pool.query(
+      `SELECT quantity FROM public.products
+       WHERE id = $1 AND user_id = $2`,
+      [productId, userId]
+    );
+    
+    if (rows.length === 0) return false;
+    return rows[0].quantity >= requiredQuantity;
+  }
 }
 
 module.exports = Product;
