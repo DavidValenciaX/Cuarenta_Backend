@@ -7,18 +7,18 @@ const pool = require('../config/data_base');
 // Create a sales order with its products
 async function createSalesOrder(req, res) {
   try {
-    const { customerId, statusId, notes, items, order_date } = req.body;
+    const { customer_id, status_id, notes, items, order_date } = req.body;
     const userId = req.usuario.userId;
 
     // Validate required fields
-    if (!customerId || !statusId || !items || !Array.isArray(items) || items.length === 0) {
+    if (!customer_id || !status_id || !items || !Array.isArray(items) || items.length === 0) {
       return sendResponse(res, 400, 'error', 'Cliente, estado y al menos un producto son requeridos');
     }
 
     // Execute all the validation and creation logic within a transaction
     const salesOrder = await SalesOrder.executeWithTransaction(async (client) => {
       // Validate customer belongs to user
-      const customer = await Customer.findById(customerId, userId);
+      const customer = await Customer.findById(customer_id, userId);
       if (!customer) {
         throw new Error('Cliente no encontrado o no pertenece al usuario');
       }
@@ -27,23 +27,23 @@ async function createSalesOrder(req, res) {
       // Calculate subtotal while validating products
       let subtotal = 0;
       for (const product of items) {
-        if (!product.productId || !product.quantity || !product.unitPrice) {
+        if (!product.product_id || !product.quantity || !product.unit_price) {
           throw new Error('Cada producto debe tener ID, cantidad y precio unitario');
         }
         
-        const productExists = await Product.findById(product.productId, userId);
+        const productExists = await Product.findById(product.product_id, userId);
         if (!productExists) {
-          throw new Error(`Producto con ID ${product.productId} no encontrado o no pertenece al usuario`);
+          throw new Error(`Producto con ID ${product.product_id} no encontrado o no pertenece al usuario`);
         }
         
         // Check if product has sufficient stock
-        const hasSufficientStock = await Product.hasSufficientStock(product.productId, product.quantity, userId);
+        const hasSufficientStock = await Product.hasSufficientStock(product.product_id, product.quantity, userId);
         if (!hasSufficientStock) {
-          throw new Error(`Producto con ID ${product.productId} no tiene suficiente stock disponible`);
+          throw new Error(`Producto con ID ${product.product_id} no tiene suficiente stock disponible`);
         }
 
         // Add to subtotal
-        subtotal += product.quantity * product.unitPrice;
+        subtotal += product.quantity * product.unit_price;
       }
 
       // Calculate total amount (including tax)
@@ -52,8 +52,8 @@ async function createSalesOrder(req, res) {
       // Create the sales order with its products
       const salesOrder = await SalesOrder.create({
         userId,
-        customerId,
-        statusId,
+        customer_id,
+        status_id,
         subtotal,
         totalAmount,
         notes,
@@ -65,7 +65,7 @@ async function createSalesOrder(req, res) {
       // Update product stock quantities
       for (const product of items) {
         // Subtract quantity (passing negative value to decrease stock)
-        await Product.updateStock(product.productId, -product.quantity, userId, client);
+        await Product.updateStock(product.product_id, -product.quantity, userId, client);
       }
 
       return salesOrder;
@@ -123,18 +123,18 @@ async function getSalesOrder(req, res) {
 async function updateSalesOrder(req, res) {
   try {
     const orderId = req.params.id;
-    const { customerId, statusId, order_date, notes, items } = req.body;
+    const { customer_id, status_id, order_date, notes, items } = req.body;
     const userId = req.usuario.userId;
 
     // Validate required fields
-    if (!customerId || !statusId) {
+    if (!customer_id || !status_id) {
       return sendResponse(res, 400, 'error', 'Cliente y estado son campos requeridos');
     }
 
     // Execute all validation and update logic within a transaction
     const updated = await SalesOrder.executeWithTransaction(async (client) => {
       // Validate customer belongs to user
-      const customer = await Customer.findById(customerId, userId);
+      const customer = await Customer.findById(customer_id, userId);
       if (!customer) {
         throw new Error('Cliente no encontrado o no pertenece al usuario');
       }
@@ -153,7 +153,7 @@ async function updateSalesOrder(req, res) {
       existingProducts.forEach(product => {
         existingProductsMap[product.product_id] = {
           quantity: product.quantity,
-          productId: product.product_id
+          product_id: product.product_id
         };
       });
 
@@ -195,15 +195,15 @@ async function updateSalesOrder(req, res) {
 
       // Format items for database
       const formattedItems = items ? items.map(item => ({
-        productId: item.product_id,
+        product_id: item.product_id,
         quantity: item.quantity,
-        unitPrice: item.unit_price
+        unit_price: item.unit_price
       })) : [];
 
       // Update the sales order
       const updated = await SalesOrder.update(orderId, {
-        customerId,
-        statusId,
+        customer_id,
+        status_id,
         order_date,
         subtotal,
         totalAmount,
@@ -218,9 +218,9 @@ async function updateSalesOrder(req, res) {
       // Process inventory adjustments for each product
       
       // First, handle items that were in the original order but are removed or changed
-      for (const productId in existingProductsMap) {
-        const existingQty = existingProductsMap[productId].quantity;
-        const newItem = items ? items.find(item => item.product_id == productId) : null;
+      for (const product_id in existingProductsMap) {
+        const existingQty = existingProductsMap[product_id].quantity;
+        const newItem = items ? items.find(item => item.product_id == product_id) : null;
         const newQty = newItem ? newItem.quantity : 0;
         
         // Calculate the difference in quantity (negative means we need to return stock)
@@ -228,7 +228,7 @@ async function updateSalesOrder(req, res) {
         
         if (qtyDifference !== 0) {
           // Update product stock (negative value decreases stock, positive increases)
-          await Product.updateStock(productId, -qtyDifference, userId, client);
+          await Product.updateStock(product_id, -qtyDifference, userId, client);
         }
       }
       

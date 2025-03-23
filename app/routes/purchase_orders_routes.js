@@ -1,5 +1,3 @@
-// app/routes/purchase_orders_routes.js
-
 const express = require('express');
 const router = express.Router();
 const { verificarToken } = require('../middlewares/auth_middleware');
@@ -7,50 +5,11 @@ const {
   createOrder,
   listOrders,
   getOrder,
-  deleteOrder,
-  updateOrder
+  updateOrder,
+  deleteOrder
 } = require('../controllers/purchase_orders_controller');
 
 router.use(verificarToken);
-
-/**
- * @swagger
- * components:
- *   schemas:
- *     PurchaseOrder:
- *       type: object
- *       properties:
- *         id:
- *           type: integer
- *           description: ID de la orden de compra
- *         supplier_id:
- *           type: integer
- *           description: ID del proveedor
- *         purchase_order_date:
- *           type: string
- *           format: date-time
- *           description: Fecha y hora de la orden
- *         status_id:
- *           type: integer
- *           description: Estado de la orden
- *         notes:
- *           type: string
- *           description: Notas adicionales
- *         items:
- *           type: array
- *           items:
- *             type: object
- *             properties:
- *               id:
- *                 type: integer
- *               product_id:
- *                 type: integer
- *               quantity:
- *                 type: integer
- *               unit_price:
- *                 type: number
- *                 format: decimal
- */
 
 /**
  * @swagger
@@ -75,8 +34,8 @@ router.use(verificarToken);
  *             type: object
  *             required:
  *               - supplier_id
- *               - items
  *               - status_id
+ *               - items
  *             properties:
  *               supplier_id:
  *                 type: integer
@@ -114,12 +73,10 @@ router.use(verificarToken);
  *     responses:
  *       201:
  *         description: Orden de compra creada exitosamente
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/PurchaseOrder'
  *       400:
  *         description: Campos inválidos o faltantes
+ *       401:
+ *         description: Token inválido o expirado
  *       404:
  *         description: Producto o proveedor no encontrado
  *       500:
@@ -138,12 +95,6 @@ router.post('/', createOrder);
  *     responses:
  *       200:
  *         description: Lista de órdenes de compra
- *         content:
- *           application/json:
- *             schema:
- *               type: array
- *               items:
- *                 $ref: '#/components/schemas/PurchaseOrder'
  *       401:
  *         description: Token inválido o expirado
  */
@@ -160,21 +111,17 @@ router.get('/', listOrders);
  *     parameters:
  *       - in: path
  *         name: id
+ *         required: true
  *         schema:
  *           type: integer
- *         required: true
  *         description: ID de la orden
  *     responses:
  *       200:
  *         description: Orden encontrada
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/PurchaseOrder'
- *       404:
- *         description: Orden no encontrada
  *       401:
  *         description: Token inválido o expirado
+ *       404:
+ *         description: Orden no encontrada
  */
 router.get('/:id', getOrder);
 
@@ -241,10 +188,10 @@ router.get('/:id', getOrder);
  *         description: Orden actualizada exitosamente
  *       400:
  *         description: Error de validación
- *       404:
- *         description: Orden no encontrada
  *       401:
  *         description: Token inválido o expirado
+ *       404:
+ *         description: Orden no encontrada
  */
 router.put('/:id', updateOrder);
 
@@ -259,17 +206,17 @@ router.put('/:id', updateOrder);
  *     parameters:
  *       - in: path
  *         name: id
+ *         required: true
  *         schema:
  *           type: integer
- *         required: true
  *         description: ID de la orden a eliminar
  *     responses:
  *       200:
  *         description: Orden eliminada exitosamente
- *       404:
- *         description: Orden no encontrada
  *       401:
  *         description: Token inválido o expirado
+ *       404:
+ *         description: Orden no encontrada
  */
 router.delete('/:id', deleteOrder);
 

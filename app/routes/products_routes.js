@@ -7,48 +7,6 @@ router.use(verificarToken);
 
 /**
  * @swagger
- * components:
- *   schemas:
- *     Product:
- *       type: object
- *       properties:
- *         id:
- *           type: integer
- *           description: ID del producto
- *         name:
- *           type: string
- *           description: Nombre del producto
- *         description:
- *           type: string
- *           description: Descripción del producto
- *         unit_price:
- *           type: number
- *           description: Precio de venta por unidad
- *         unit_cost:
- *           type: number
- *           description: Costo por unidad
- *         image_url:
- *           type: string
- *           description: URL de la imagen del producto
- *         category_id:
- *           type: integer
- *           description: ID de la categoría
- *         unit_of_measure_id:
- *           type: integer
- *           description: ID de la unidad de medida
- *         quantity:
- *           type: number
- *           description: Cantidad en inventario
- *         barcode:
- *           type: string
- *           description: Código de barras
- *         user_id:
- *           type: integer
- *           description: ID del usuario propietario
- */
-
-/**
- * @swagger
  * tags:
  *   name: Products
  *   description: CRUD de productos del usuario autenticado
@@ -125,12 +83,6 @@ router.post('/', createProduct);
  *     responses:
  *       200:
  *         description: Lista de productos
- *         content:
- *           application/json:
- *             schema:
- *               type: array
- *               items:
- *                 $ref: '#/components/schemas/Product'
  *       401:
  *         description: Token inválido o expirado
  */
@@ -154,10 +106,6 @@ router.get('/', listProducts);
  *     responses:
  *       200:
  *         description: Producto encontrado
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Product'
  *       404:
  *         description: Producto no encontrado
  *       401:
@@ -217,10 +165,6 @@ router.get('/:id', getProduct);
  *     responses:
  *       200:
  *         description: Producto actualizado exitosamente
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Product'
  *       400:
  *         description: Error de validación
  *       404:

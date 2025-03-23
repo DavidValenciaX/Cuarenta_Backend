@@ -18,7 +18,7 @@ class SalesOrder {
   }
 
   // Create a sales order with its products
-  static async create({ userId, customerId, statusId, subtotal, totalAmount, notes, items, order_date, client }) {
+  static async create({ userId, customer_id, status_id, subtotal, totalAmount, notes, items, order_date, client }) {
     // If client is provided, use it (part of an existing transaction)
     // Otherwise create a new transaction
     if (client) {
@@ -26,7 +26,7 @@ class SalesOrder {
       const orderResult = await client.query(
         `INSERT INTO public.sales_orders(user_id, customer_id, status_id, subtotal, total_amount, notes, order_date)
          VALUES($1, $2, $3, $4, $5, $6, COALESCE($7, NOW())) RETURNING *`,
-        [userId, customerId, statusId, subtotal, totalAmount, notes, order_date]
+        [userId, customer_id, status_id, subtotal, totalAmount, notes, order_date]
       );
       
       const salesOrder = orderResult.rows[0];
@@ -37,7 +37,7 @@ class SalesOrder {
           await client.query(
             `INSERT INTO public.sales_order_products(sales_order_id, product_id, quantity, unit_price)
              VALUES($1, $2, $3, $4)`,
-            [salesOrder.id, product.productId, product.quantity, product.unitPrice]
+            [salesOrder.id, product.product_id, product.quantity, product.unit_price]
           );
         }
       }
@@ -46,7 +46,7 @@ class SalesOrder {
     } else {
       // Execute within a new transaction
       return this.executeWithTransaction(async (client) => {
-        const orderData = { userId, customerId, statusId, subtotal, totalAmount, notes, items, order_date, client };
+        const orderData = { userId, customer_id, status_id, subtotal, totalAmount, notes, items, order_date, client };
         return await this.create(orderData);
       });
     }
@@ -93,7 +93,7 @@ class SalesOrder {
   }
 
   // Update a sales order
-  static async update(id, { customerId, statusId, order_date, subtotal, totalAmount, notes, items }, userId, client = null) {
+  static async update(id, { customer_id, status_id, order_date, subtotal, totalAmount, notes, items }, userId, client = null) {
     if (client) {
       // Build the update query based on whether order_date is provided
       let updateQuery = `
@@ -101,7 +101,7 @@ class SalesOrder {
         SET customer_id = $1, status_id = $2, subtotal = $3, total_amount = $4, notes = $5, updated_at = NOW()
       `;
       
-      const queryParams = [customerId, statusId, subtotal, totalAmount, notes];
+      const queryParams = [customer_id, status_id, subtotal, totalAmount, notes];
       let paramIndex = 6;
       
       // Add order_date to the query if provided
@@ -135,7 +135,7 @@ class SalesOrder {
           await client.query(
             `INSERT INTO public.sales_order_products(sales_order_id, product_id, quantity, unit_price)
              VALUES($1, $2, $3, $4)`,
-            [id, item.productId, item.quantity, item.unitPrice]
+            [id, item.product_id, item.quantity, item.unit_price]
           );
         }
       }
@@ -144,7 +144,7 @@ class SalesOrder {
     } else {
       // Execute within a new transaction
       return this.executeWithTransaction(async (client) => {
-        return await this.update(id, { customerId, statusId, order_date, subtotal, totalAmount, notes, items }, userId, client);
+        return await this.update(id, { customer_id, status_id, order_date, subtotal, totalAmount, notes, items }, userId, client);
       });
     }
   }
@@ -161,10 +161,10 @@ class SalesOrder {
   }
 
   // Validate customer and check if it belongs to user
-  static async validateCustomer(customerId, userId, client) {
+  static async validateCustomer(customer_id, userId, client) {
     const { rows } = await client.query(
       `SELECT * FROM public.customers WHERE id = $1 AND user_id = $2`,
-      [customerId, userId]
+      [customer_id, userId]
     );
     return rows[0];
   }
