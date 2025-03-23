@@ -129,6 +129,12 @@ async function updateOrder(req, res) {
       return sendResponse(res, 404, 'error', 'Proveedor inválido');
     }
 
+    // Validate order
+    const order = await PurchaseOrder.findById(orderId, userId);
+    if (!order) {
+      return sendResponse(res, 404, 'error', 'Orden de compra no encontrada');
+    }
+
     // Calculate subtotal and validate products
     let subtotal = 0;
     const validatedItems = [];
