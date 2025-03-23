@@ -2,7 +2,6 @@ const SalesOrder = require('../models/sales_orders_model');
 const Customer = require('../models/customers_model');
 const Product = require('../models/products_model');
 const { sendResponse } = require('../utils/response_util');
-const pool = require('../config/data_base');
 
 // Create a sales order with its products
 async function createSalesOrder(req, res) {

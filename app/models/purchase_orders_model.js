@@ -18,8 +18,10 @@ class PurchaseOrder {
   }
 
   // Create a purchase order with its products
-  static async create({ userId, supplier_id, status_id, subtotal, total_amount, purchase_order_date, notes, items }) {
-    return this.executeWithTransaction(async (client) => {
+  static async create({ userId, supplier_id, status_id, subtotal, total_amount, purchase_order_date, notes, items, client }) {
+    // If client is provided, use it (part of an existing transaction)
+    // Otherwise create a new transaction
+    if (client) {
       // Insert the purchase order
       const order = await client.query(
         `INSERT INTO public.purchase_orders(user_id, supplier_id, status_id, subtotal, total_amount, purchase_order_date, notes)
@@ -77,7 +79,13 @@ class PurchaseOrder {
       }
       
       return purchaseOrder;
-    });
+    } else {
+      // Execute within a new transaction
+      return this.executeWithTransaction(async (client) => {
+        const orderData = { userId, supplier_id, status_id, subtotal, total_amount, purchase_order_date, notes, items, client };
+        return await this.create(orderData);
+      });
+    }
   }
 
   // Find all purchase orders for a user
