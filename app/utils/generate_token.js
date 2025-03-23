@@ -13,7 +13,3 @@ function generateToken() {
 }
 
 module.exports = { generateToken };
-
-// Ejemplo de uso
-const confirmationTokenHash = generateToken();
-console.log(confirmationTokenHash);

@@ -73,110 +73,56 @@ async function getOrder(req, res) {
 }
 
 async function updateOrder(req, res) {
-    const userId = req.usuario.userId;
-    const orderId = Number(req.params.id);
-    const { supplier_id, status_id, purchase_order_date, notes, items } = req.body;
-  
-    if (!supplier_id || status_id == null || !Array.isArray(items) || items.length === 0) {
-      return sendResponse(res, 400, 'error', 'supplier_id, status_id e items son requeridos');
-    }
-  
-    const client = await pool.connect();
-    try {
-      await client.query('BEGIN');
-  
-      // Verificar existencia de orden y pertenencia
-      const existingOrder = await PurchaseOrder.findById(orderId, userId);
-      if (!existingOrder) {
-        await client.query('ROLLBACK');
-        return sendResponse(res, 404, 'error', 'Orden no encontrada');
-      }
-  
-      // Validar proveedor
-      const supplier = await Supplier.findById(supplier_id, userId);
-      if (!supplier) throw new Error('Proveedor inválido');
-  
-      // Cargar items existentes
-      const { rows: oldItems } = await client.query(
-        `SELECT * FROM public.purchase_order_products WHERE purchase_order_id = $1`, [orderId]
-      );
-      const oldMap = Object.fromEntries(oldItems.map(i => [i.product_id, i]));
-  
-      let subtotal = 0;
-  
-      // Procesar nuevos items
-      const newIds = items.map(i => i.product_id);
-      for (const { product_id, quantity, unit_price } of items) {
-        const qty = Number(quantity);
-        const price = Number(unit_price);
-        if (!qty || qty <= 0 || isNaN(price) || price <= 0) {
-          throw new Error('Cantidad y precio unitario inválidos');
-        }
-  
-        const product = await Product.findById(product_id, userId);
-        if (!product) throw new Error(`Producto ${product_id} inválido`);
-  
-        subtotal += qty * price;
-  
-        if (oldMap[product_id]) {
-          // actualizar existente
-          const diff = qty - oldMap[product_id].quantity;
-          await client.query(
-            `UPDATE public.purchase_order_products
-               SET quantity = $1, unit_price = $2
-             WHERE purchase_order_id = $3 AND product_id = $4`,
-            [qty, price, orderId, product_id]
-          );
-          await client.query(
-            `UPDATE public.products SET quantity = quantity + $1 WHERE id = $2 AND user_id = $3`,
-            [diff, product_id, userId]
-          );
-          delete oldMap[product_id];
-        } else {
-          // insertar nuevo
-          await client.query(
-            `INSERT INTO public.purchase_order_products(purchase_order_id, product_id, quantity, unit_price)
-             VALUES($1,$2,$3,$4)`,
-            [orderId, product_id, qty, price]
-          );
-          await client.query(
-            `UPDATE public.products SET quantity = quantity + $1 WHERE id = $2 AND user_id = $3`,
-            [qty, product_id, userId]
-          );
-        }
-      }
-  
-      // Eliminar items sobrantes
-      for (const leftover of Object.values(oldMap)) {
-        await client.query(
-          `DELETE FROM public.purchase_order_products WHERE purchase_order_id = $1 AND product_id = $2`,
-          [orderId, leftover.product_id]
-        );
-        await client.query(
-          `UPDATE public.products SET quantity = quantity - $1 WHERE id = $2 AND user_id = $3`,
-          [leftover.quantity, leftover.product_id, userId]
-        );
-      }
-  
-      const total_amount = subtotal;
-      await client.query(
-        `UPDATE public.purchase_orders
-           SET supplier_id = $1, status_id = $2, subtotal = $3, total_amount = $4, purchase_order_date = $5, notes = $6
-         WHERE id = $7 AND user_id = $8`,
-        [supplier_id, status_id, subtotal, total_amount, purchase_order_date || new Date(), notes, orderId, userId]
-      );
-  
-      await client.query('COMMIT');
-      return sendResponse(res, 200, 'success', 'Orden actualizada');
-    } catch (error) {
-      await client.query('ROLLBACK');
-      return sendResponse(res, 400, 'error', error.message);
-    } finally {
-      client.release();
-    }
+  const userId = req.usuario.userId;
+  const orderId = Number(req.params.id);
+  const { supplier_id, status_id, purchase_order_date, notes, items } = req.body;
+
+  if (!supplier_id || status_id == null || !Array.isArray(items) || items.length === 0) {
+    return sendResponse(res, 400, 'error', 'supplier_id, status_id e items son requeridos');
   }
-  
-  
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    // Validar proveedor
+    const supplier = await Supplier.findById(supplier_id, userId);
+    if (!supplier) throw new Error('Proveedor inválido');
+
+    // Validar productos
+    for (const { product_id, quantity, unit_price } of items) {
+      const qty = Number(quantity);
+      const price = Number(unit_price);
+      if (!qty || qty <= 0 || isNaN(price) || price <= 0) {
+        throw new Error('Cantidad y precio unitario inválidos');
+      }
+
+      const product = await Product.findById(product_id, userId);
+      if (!product) throw new Error(`Producto ${product_id} inválido`);
+    }
+
+    const updatedOrder = await PurchaseOrder.updateOrderWithItems(client, orderId, userId, {
+      supplier_id, 
+      status_id, 
+      purchase_order_date, 
+      notes, 
+      items
+    });
+
+    if (!updatedOrder) {
+      await client.query('ROLLBACK');
+      return sendResponse(res, 404, 'error', 'Orden no encontrada');
+    }
+
+    await client.query('COMMIT');
+    return sendResponse(res, 200, 'success', 'Orden actualizada', updatedOrder);
+  } catch (error) {
+    await client.query('ROLLBACK');
+    return sendResponse(res, 400, 'error', error.message);
+  } finally {
+    client.release();
+  }
+}
 
 async function deleteOrder(req, res) {
   const userId = req.usuario.userId;

@@ -213,6 +213,80 @@ static async deleteOrderById(client, orderId, userId) {
   return rows[0];
 }
 
+static async updateOrderWithItems(client, orderId, userId, { supplier_id, status_id, purchase_order_date, notes, items }) {
+  // Verificar existencia de orden y pertenencia
+  const existingOrder = await this.findById(orderId, userId);
+  if (!existingOrder) {
+    return null;
+  }
+
+  // Cargar items existentes
+  const { rows: oldItems } = await client.query(
+    `SELECT * FROM public.purchase_order_products WHERE purchase_order_id = $1`, [orderId]
+  );
+  const oldMap = Object.fromEntries(oldItems.map(i => [i.product_id, i]));
+
+  let subtotal = 0;
+
+  // Procesar nuevos items
+  for (const { product_id, quantity, unit_price } of items) {
+    const qty = Number(quantity);
+    const price = Number(unit_price);
+    
+    subtotal += qty * price;
+
+    if (oldMap[product_id]) {
+      // actualizar existente
+      const diff = qty - oldMap[product_id].quantity;
+      await client.query(
+        `UPDATE public.purchase_order_products
+           SET quantity = $1, unit_price = $2
+         WHERE purchase_order_id = $3 AND product_id = $4`,
+        [qty, price, orderId, product_id]
+      );
+      await client.query(
+        `UPDATE public.products SET quantity = quantity + $1 WHERE id = $2 AND user_id = $3`,
+        [diff, product_id, userId]
+      );
+      delete oldMap[product_id];
+    } else {
+      // insertar nuevo
+      await client.query(
+        `INSERT INTO public.purchase_order_products(purchase_order_id, product_id, quantity, unit_price)
+         VALUES($1,$2,$3,$4)`,
+        [orderId, product_id, qty, price]
+      );
+      await client.query(
+        `UPDATE public.products SET quantity = quantity + $1 WHERE id = $2 AND user_id = $3`,
+        [qty, product_id, userId]
+      );
+    }
+  }
+
+  // Eliminar items sobrantes
+  for (const leftover of Object.values(oldMap)) {
+    await client.query(
+      `DELETE FROM public.purchase_order_products WHERE purchase_order_id = $1 AND product_id = $2`,
+      [orderId, leftover.product_id]
+    );
+    await client.query(
+      `UPDATE public.products SET quantity = quantity - $1 WHERE id = $2 AND user_id = $3`,
+      [leftover.quantity, leftover.product_id, userId]
+    );
+  }
+
+  const total_amount = subtotal;
+  const { rows } = await client.query(
+    `UPDATE public.purchase_orders
+       SET supplier_id = $1, status_id = $2, subtotal = $3, total_amount = $4, purchase_order_date = $5, notes = $6
+     WHERE id = $7 AND user_id = $8
+     RETURNING *`,
+    [supplier_id, status_id, subtotal, total_amount, purchase_order_date || new Date(), notes, orderId, userId]
+  );
+  
+  return rows[0];
+}
+
 }
 
 
