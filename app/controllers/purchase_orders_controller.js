@@ -36,30 +36,23 @@ async function createOrder(req, res) {
 
   const total_amount = subtotal;
 
-  const client = await pool.connect();
   try {
-    await client.query('BEGIN');
-    const order = await PurchaseOrder.createOrder(client, {
+    const order = await PurchaseOrder.createOrderWithTransaction({
       userId,
       supplier_id,
       status_id,
       subtotal,
       total_amount,
       purchase_order_date: purchase_order_date || new Date(),
-      notes
+      notes,
+      items
     });
-
-    await PurchaseOrder.addProducts(client, order.id, items, userId);
-    await client.query('COMMIT');
+    
     return sendResponse(res, 201, 'success', 'Orden creada', order);
   } catch (error) {
-    await client.query('ROLLBACK');
     return sendResponse(res, 500, 'error', error.message);
-  } finally {
-    client.release();
   }
 }
-
 
 async function listOrders(req, res) {
   const orders = await PurchaseOrder.findAllByUser(req.usuario.userId);
@@ -81,10 +74,7 @@ async function updateOrder(req, res) {
     return sendResponse(res, 400, 'error', 'supplier_id, status_id e items son requeridos');
   }
 
-  const client = await pool.connect();
   try {
-    await client.query('BEGIN');
-
     // Validar proveedor
     const supplier = await Supplier.findById(supplier_id, userId);
     if (!supplier) throw new Error('Proveedor inválido');
@@ -101,7 +91,7 @@ async function updateOrder(req, res) {
       if (!product) throw new Error(`Producto ${product_id} inválido`);
     }
 
-    const updatedOrder = await PurchaseOrder.updateOrderWithItems(client, orderId, userId, {
+    const updatedOrder = await PurchaseOrder.updateOrderWithTransaction(orderId, userId, {
       supplier_id, 
       status_id, 
       purchase_order_date, 
@@ -110,43 +100,30 @@ async function updateOrder(req, res) {
     });
 
     if (!updatedOrder) {
-      await client.query('ROLLBACK');
       return sendResponse(res, 404, 'error', 'Orden no encontrada');
     }
 
-    await client.query('COMMIT');
     return sendResponse(res, 200, 'success', 'Orden actualizada', updatedOrder);
   } catch (error) {
-    await client.query('ROLLBACK');
     return sendResponse(res, 400, 'error', error.message);
-  } finally {
-    client.release();
   }
 }
 
 async function deleteOrder(req, res) {
   const userId = req.usuario.userId;
   const orderId = Number(req.params.id);
-  const client = await pool.connect();
 
   try {
-    await client.query('BEGIN');
-
-    const deletedOrder = await PurchaseOrder.deleteOrderById(client, orderId, userId);
+    const deletedOrder = await PurchaseOrder.deleteOrderWithTransaction(orderId, userId);
     
     if (!deletedOrder) {
-      await client.query('ROLLBACK');
       return sendResponse(res, 404, 'error', 'Orden no encontrada o sin items');
     }
 
-    await client.query('COMMIT');
     return sendResponse(res, 200, 'success', 'Orden eliminada exitosamente');
   } catch (error) {
-    await client.query('ROLLBACK');
     console.error(error);
     return sendResponse(res, 500, 'error', 'Error al eliminar orden');
-  } finally {
-    client.release();
   }
 }
 

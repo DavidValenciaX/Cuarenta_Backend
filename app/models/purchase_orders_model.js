@@ -287,8 +287,75 @@ static async updateOrderWithItems(client, orderId, userId, { supplier_id, status
   return rows[0];
 }
 
+static async createOrderWithTransaction(orderData) {
+  const { userId, supplier_id, status_id, subtotal, total_amount, purchase_order_date, notes, items } = orderData;
+  
+  const client = await pool.connect();
+  try {
+      await client.query('BEGIN');
+      const order = await this.createOrder(client, {
+          userId,
+          supplier_id,
+          status_id,
+          subtotal,
+          total_amount,
+          purchase_order_date: purchase_order_date || new Date(),
+          notes
+      });
+
+      await this.addProducts(client, order.id, items, userId);
+      await client.query('COMMIT');
+      return order;
+  } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+  } finally {
+      client.release();
+  }
 }
 
+static async updateOrderWithTransaction(orderId, userId, orderData) {
+  const client = await pool.connect();
+  try {
+      await client.query('BEGIN');
+      const updatedOrder = await this.updateOrderWithItems(client, orderId, userId, orderData);
+      
+      if (!updatedOrder) {
+          await client.query('ROLLBACK');
+          return null;
+      }
+      
+      await client.query('COMMIT');
+      return updatedOrder;
+  } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+  } finally {
+      client.release();
+  }
+}
 
+static async deleteOrderWithTransaction(orderId, userId) {
+  const client = await pool.connect();
+  try {
+      await client.query('BEGIN');
+      const deletedOrder = await this.deleteOrderById(client, orderId, userId);
+      
+      if (!deletedOrder) {
+          await client.query('ROLLBACK');
+          return null;
+      }
+      
+      await client.query('COMMIT');
+      return deletedOrder;
+  } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+  } finally {
+      client.release();
+  }
+}
+
+}
 
 module.exports = PurchaseOrder;
