@@ -1,29 +1,60 @@
 const pool = require('../config/data_base');
 
 class PurchaseOrder {
-    static async addProducts(client, orderId, products, userId) {
-        for (const { product_id, quantity, unit_price } of products) {
+  // Utility method to execute operations within a transaction
+  static async executeWithTransaction(callback) {
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      const result = await callback(client);
+      await client.query('COMMIT');
+      return result;
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
+  // Create a purchase order with its products
+  static async create({ userId, supplier_id, status_id, subtotal, total_amount, purchase_order_date, notes, items }) {
+    return this.executeWithTransaction(async (client) => {
+      // Insert the purchase order
+      const order = await client.query(
+        `INSERT INTO public.purchase_orders(user_id, supplier_id, status_id, subtotal, total_amount, purchase_order_date, notes)
+         VALUES ($1, $2, $3, $4, $5, COALESCE($6, NOW()), $7)
+         RETURNING *`,
+        [userId, supplier_id, status_id, subtotal, total_amount, purchase_order_date, notes]
+      );
+      
+      const purchaseOrder = order.rows[0];
+      
+      // Insert all the purchase order products
+      if (items && items.length > 0) {
+        for (const product of items) {
           await client.query(
             `INSERT INTO public.purchase_order_products(purchase_order_id, product_id, quantity, unit_price)
              VALUES ($1, $2, $3, $4)`,
-            [orderId, product_id, quantity, unit_price]
+            [purchaseOrder.id, product.product_id, product.quantity, product.unit_price]
           );
-      
+          
+          // Update product quantity in inventory
           const result = await client.query(
             `UPDATE public.products
                SET quantity = quantity + $1
              WHERE id = $2 AND user_id = $3
              RETURNING unit_price`,
-            [quantity, product_id, userId]
+            [product.quantity, product.product_id, userId]
           );
-      
+          
           if (!result.rows.length) {
-            throw new Error(`No se pudo actualizar inventario para producto ${product_id}`);
+            throw new Error(`No se pudo actualizar inventario para producto ${product.product_id}`);
           }
-      
+          
           const currentUnitPrice = result.rows[0].unit_price;
-      
-          // Verificar si esta orden es la más reciente
+          
+          // Check if this order is the most recent one for this product
           const { rows: [latest] } = await client.query(
             `SELECT po.id
              FROM public.purchase_orders po
@@ -31,299 +62,185 @@ class PurchaseOrder {
              WHERE pop.product_id = $1 AND po.user_id = $2
              ORDER BY po.purchase_order_date DESC
              LIMIT 1`,
-            [product_id, userId]
+            [product.product_id, userId]
           );
-      
-          if (latest?.id === orderId && unit_price > currentUnitPrice) {
+          
+          if (latest?.id === purchaseOrder.id && product.unit_price > currentUnitPrice) {
             await client.query(
               `UPDATE public.products
                SET unit_price = $1
                WHERE id = $2 AND user_id = $3`,
-              [unit_price, product_id, userId]
+              [product.unit_price, product.product_id, userId]
             );
           }
         }
       }
       
-    
-    static async createOrder(client, { userId, supplier_id, status_id, subtotal, total_amount, purchase_order_date, notes }) {
-        const { rows } = await client.query(
-          `INSERT INTO public.purchase_orders(user_id, supplier_id, status_id, subtotal, total_amount, purchase_order_date, notes)
-           VALUES ($1, $2, $3, $4, $5, $6, $7)
-           RETURNING *`,
-          [userId, supplier_id, status_id, subtotal, total_amount, purchase_order_date, notes]
-        );
-        return rows[0];
-      }
+      return purchaseOrder;
+    });
+  }
 
+  // Find all purchase orders for a user
   static async findAllByUser(userId) {
     const { rows } = await pool.query(
-      `SELECT po.*, json_agg(pop.*) AS items
+      `SELECT po.*, s.name as supplier_name, st.name as status_name
        FROM public.purchase_orders po
-       LEFT JOIN public.purchase_order_products pop ON pop.purchase_order_id = po.id
+       JOIN public.suppliers s ON po.supplier_id = s.id
+       JOIN public.status_types st ON po.status_id = st.id
        WHERE po.user_id = $1
-       GROUP BY po.id ORDER BY po.created_at DESC`,
+       ORDER BY po.purchase_order_date DESC`,
       [userId]
     );
     return rows;
   }
 
+  // Find a purchase order by ID
   static async findById(id, userId) {
     const { rows } = await pool.query(
-      `SELECT po.*, json_agg(pop.*) AS items
+      `SELECT po.*, s.name as supplier_name, st.name as status_name
        FROM public.purchase_orders po
-       LEFT JOIN public.purchase_order_products pop ON pop.purchase_order_id = po.id
-       WHERE po.id = $1 AND po.user_id = $2
-       GROUP BY po.id`,
+       JOIN public.suppliers s ON po.supplier_id = s.id
+       JOIN public.status_types st ON po.status_id = st.id
+       WHERE po.id = $1 AND po.user_id = $2`,
       [id, userId]
     );
     return rows[0];
   }
 
-  static async delete(id, userId) {
+  // Get products for a purchase order
+  static async getProducts(purchaseOrderId, userId) {
     const { rows } = await pool.query(
-      `DELETE FROM public.purchase_orders WHERE id = $1 AND user_id = $2 RETURNING *`,
-      [id, userId]
+      `SELECT pop.*, p.name as product_name, p.description as product_description
+       FROM public.purchase_order_products pop
+       JOIN public.products p ON pop.product_id = p.id
+       JOIN public.purchase_orders po ON pop.purchase_order_id = po.id
+       WHERE pop.purchase_order_id = $1 AND po.user_id = $2`,
+      [purchaseOrderId, userId]
+    );
+    return rows;
+  }
+
+  // Update a purchase order
+  static async update(id, { supplier_id, status_id, purchase_order_date, subtotal, total_amount, notes, items }, userId) {
+    return this.executeWithTransaction(async (client) => {
+      // Verify the order exists and belongs to user
+      const existingOrder = await this.validatePurchaseOrder(id, userId, client);
+      if (!existingOrder) {
+        return null;
+      }
+
+      // Get existing items
+      const { rows: oldItems } = await client.query(
+        `SELECT product_id, quantity FROM public.purchase_order_products WHERE purchase_order_id = $1`,
+        [id]
+      );
+      
+      // Revert inventory for old items
+      for (const item of oldItems) {
+        await client.query(
+          `UPDATE public.products SET quantity = quantity - $1 WHERE id = $2 AND user_id = $3`,
+          [item.quantity, item.product_id, userId]
+        );
+      }
+      
+      // Delete old items
+      await client.query(
+        `DELETE FROM public.purchase_order_products WHERE purchase_order_id = $1`,
+        [id]
+      );
+      
+      // Build the update query
+      let updateQuery = `
+        UPDATE public.purchase_orders
+        SET supplier_id = $1, status_id = $2, subtotal = $3, total_amount = $4, notes = $5, updated_at = NOW()
+      `;
+      
+      const queryParams = [supplier_id, status_id, subtotal, total_amount, notes];
+      let paramIndex = 6;
+      
+      // Add purchase_order_date to the query if provided
+      if (purchase_order_date) {
+        updateQuery += `, purchase_order_date = $${paramIndex}`;
+        queryParams.push(purchase_order_date);
+        paramIndex++;
+      }
+      
+      updateQuery += ` WHERE id = $${paramIndex} AND user_id = $${paramIndex + 1} RETURNING *`;
+      queryParams.push(id, userId);
+      
+      const orderResult = await client.query(updateQuery, queryParams);
+      
+      if (orderResult.rows.length === 0) {
+        return null;
+      }
+      
+      const purchaseOrder = orderResult.rows[0];
+      
+      // If items are provided, add new items and update inventory
+      if (items && items.length > 0) {
+        for (const item of items) {
+          await client.query(
+            `INSERT INTO public.purchase_order_products(purchase_order_id, product_id, quantity, unit_price)
+             VALUES($1, $2, $3, $4)`,
+            [id, item.product_id, item.quantity, item.unit_price]
+          );
+          
+          // Update product quantity
+          await client.query(
+            `UPDATE public.products SET quantity = quantity + $1 WHERE id = $2 AND user_id = $3`,
+            [item.quantity, item.product_id, userId]
+          );
+        }
+      }
+      
+      return purchaseOrder;
+    });
+  }
+
+  // Delete a purchase order and update inventory
+  static async delete(id, userId) {
+    return this.executeWithTransaction(async (client) => {
+      // Get all items from the order
+      const { rows: items } = await client.query(
+        `SELECT product_id, quantity FROM public.purchase_order_products WHERE purchase_order_id = $1`,
+        [id]
+      );
+      
+      // Update inventory for each product
+      for (const { product_id, quantity } of items) {
+        await client.query(
+          `UPDATE public.products SET quantity = quantity - $1 WHERE id = $2 AND user_id = $3`,
+          [quantity, product_id, userId]
+        );
+      }
+      
+      // Delete the purchase order (will cascade delete its products)
+      const { rows } = await client.query(
+        `DELETE FROM public.purchase_orders WHERE id = $1 AND user_id = $2 RETURNING *`,
+        [id, userId]
+      );
+      
+      return rows[0];
+    });
+  }
+
+  // Validate supplier and check if it belongs to user
+  static async validateSupplier(supplier_id, userId, client) {
+    const { rows } = await client.query(
+      `SELECT * FROM public.suppliers WHERE id = $1 AND user_id = $2`,
+      [supplier_id, userId]
     );
     return rows[0];
   }
 
-  static async update({ id, supplier_id, status_id = null, purchase_order_date = null, notes = null, products, userId }) {
-  const client = await pool.connect();
-  try {
-    await client.query('BEGIN');
-
-    // Obtener items actuales
-    const { rows: existingItems } = await client.query(
-      `SELECT product_id, quantity FROM public.purchase_order_products WHERE purchase_order_id = $1`,
-      [id]
-    );
-
-    // Revertir stock de productos antiguos
-    for (const item of existingItems) {
-      await client.query(
-        `UPDATE public.products SET quantity = quantity - $1 WHERE id = $2 AND user_id = $3`,
-        [item.quantity, item.product_id, userId]
-      );
-    }
-
-    // Eliminar items anteriores
-    await client.query(
-      `DELETE FROM public.purchase_order_products WHERE purchase_order_id = $1`,
-      [id]
-    );
-
-    // Actualizar cabecera de orden
+  // Validate purchase order exists and belongs to user
+  static async validatePurchaseOrder(orderId, userId, client) {
     const { rows } = await client.query(
-      `UPDATE public.purchase_orders
-         SET supplier_id=$1, status_id=$2, purchase_order_date=COALESCE($3,NOW()), notes=$4, updated_at=NOW()
-       WHERE id=$5 AND user_id=$6 RETURNING *`,
-      [supplier_id, status_id, purchase_order_date, notes, id, userId]
+      `SELECT * FROM public.purchase_orders WHERE id = $1 AND user_id = $2`,
+      [orderId, userId]
     );
-    const order = rows[0];
-
-    // Insertar nuevos items y actualizar stock
-    const items = [];
-    for (const p of products) {
-      const { rows: itemRows } = await client.query(
-        `INSERT INTO public.purchase_order_products(purchase_order_id, product_id, quantity, unit_price)
-         VALUES($1,$2,$3,$4) RETURNING *`,
-        [order.id, p.product_id, p.quantity, p.unit_price]
-      );
-      items.push(itemRows[0]);
-
-      await client.query(
-        `UPDATE public.products SET quantity = quantity + $1 WHERE id = $2 AND user_id = $3`,
-        [p.quantity, p.product_id, userId]
-      );
-    }
-
-    await client.query('COMMIT');
-    return { order, items };
-  } catch(err) {
-    await client.query('ROLLBACK');
-    throw err;
-  } finally {
-    client.release();
+    return rows[0];
   }
-}
-
-static async deleteOrderById(client, orderId, userId) {
-  // Get all items from the order
-  const { rows: items } = await client.query(
-    `SELECT product_id, quantity 
-       FROM public.purchase_order_products 
-     WHERE purchase_order_id = $1`,
-    [orderId]
-  );
-
-  if (items.length === 0) {
-    return null;
-  }
-
-  // Update each product's quantity
-  for (const { product_id, quantity } of items) {
-    await client.query(
-      `UPDATE public.products 
-         SET quantity = quantity - $1 
-       WHERE id = $2 AND user_id = $3`,
-      [quantity, product_id, userId]
-    );
-  }
-
-  // Delete the order (and its items via cascade)
-  const { rows } = await client.query(
-    `DELETE FROM public.purchase_orders 
-     WHERE id = $1 AND user_id = $2 RETURNING *`,
-    [orderId, userId]
-  );
-
-  return rows[0];
-}
-
-static async updateOrderWithItems(client, orderId, userId, { supplier_id, status_id, purchase_order_date, notes, items }) {
-  // Verificar existencia de orden y pertenencia
-  const existingOrder = await this.findById(orderId, userId);
-  if (!existingOrder) {
-    return null;
-  }
-
-  // Cargar items existentes
-  const { rows: oldItems } = await client.query(
-    `SELECT * FROM public.purchase_order_products WHERE purchase_order_id = $1`, [orderId]
-  );
-  const oldMap = Object.fromEntries(oldItems.map(i => [i.product_id, i]));
-
-  let subtotal = 0;
-
-  // Procesar nuevos items
-  for (const { product_id, quantity, unit_price } of items) {
-    const qty = Number(quantity);
-    const price = Number(unit_price);
-    
-    subtotal += qty * price;
-
-    if (oldMap[product_id]) {
-      // actualizar existente
-      const diff = qty - oldMap[product_id].quantity;
-      await client.query(
-        `UPDATE public.purchase_order_products
-           SET quantity = $1, unit_price = $2
-         WHERE purchase_order_id = $3 AND product_id = $4`,
-        [qty, price, orderId, product_id]
-      );
-      await client.query(
-        `UPDATE public.products SET quantity = quantity + $1 WHERE id = $2 AND user_id = $3`,
-        [diff, product_id, userId]
-      );
-      delete oldMap[product_id];
-    } else {
-      // insertar nuevo
-      await client.query(
-        `INSERT INTO public.purchase_order_products(purchase_order_id, product_id, quantity, unit_price)
-         VALUES($1,$2,$3,$4)`,
-        [orderId, product_id, qty, price]
-      );
-      await client.query(
-        `UPDATE public.products SET quantity = quantity + $1 WHERE id = $2 AND user_id = $3`,
-        [qty, product_id, userId]
-      );
-    }
-  }
-
-  // Eliminar items sobrantes
-  for (const leftover of Object.values(oldMap)) {
-    await client.query(
-      `DELETE FROM public.purchase_order_products WHERE purchase_order_id = $1 AND product_id = $2`,
-      [orderId, leftover.product_id]
-    );
-    await client.query(
-      `UPDATE public.products SET quantity = quantity - $1 WHERE id = $2 AND user_id = $3`,
-      [leftover.quantity, leftover.product_id, userId]
-    );
-  }
-
-  const total_amount = subtotal;
-  const { rows } = await client.query(
-    `UPDATE public.purchase_orders
-       SET supplier_id = $1, status_id = $2, subtotal = $3, total_amount = $4, purchase_order_date = $5, notes = $6
-     WHERE id = $7 AND user_id = $8
-     RETURNING *`,
-    [supplier_id, status_id, subtotal, total_amount, purchase_order_date || new Date(), notes, orderId, userId]
-  );
-  
-  return rows[0];
-}
-
-static async createOrderWithTransaction(orderData) {
-  const { userId, supplier_id, status_id, subtotal, total_amount, purchase_order_date, notes, items } = orderData;
-  
-  const client = await pool.connect();
-  try {
-      await client.query('BEGIN');
-      const order = await this.createOrder(client, {
-          userId,
-          supplier_id,
-          status_id,
-          subtotal,
-          total_amount,
-          purchase_order_date: purchase_order_date || new Date(),
-          notes
-      });
-
-      await this.addProducts(client, order.id, items, userId);
-      await client.query('COMMIT');
-      return order;
-  } catch (error) {
-      await client.query('ROLLBACK');
-      throw error;
-  } finally {
-      client.release();
-  }
-}
-
-static async updateOrderWithTransaction(orderId, userId, orderData) {
-  const client = await pool.connect();
-  try {
-      await client.query('BEGIN');
-      const updatedOrder = await this.updateOrderWithItems(client, orderId, userId, orderData);
-      
-      if (!updatedOrder) {
-          await client.query('ROLLBACK');
-          return null;
-      }
-      
-      await client.query('COMMIT');
-      return updatedOrder;
-  } catch (error) {
-      await client.query('ROLLBACK');
-      throw error;
-  } finally {
-      client.release();
-  }
-}
-
-static async deleteOrderWithTransaction(orderId, userId) {
-  const client = await pool.connect();
-  try {
-      await client.query('BEGIN');
-      const deletedOrder = await this.deleteOrderById(client, orderId, userId);
-      
-      if (!deletedOrder) {
-          await client.query('ROLLBACK');
-          return null;
-      }
-      
-      await client.query('COMMIT');
-      return deletedOrder;
-  } catch (error) {
-      await client.query('ROLLBACK');
-      throw error;
-  } finally {
-      client.release();
-  }
-}
-
 }
 
 module.exports = PurchaseOrder;
