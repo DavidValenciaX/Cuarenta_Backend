@@ -129,8 +129,8 @@ class PurchaseOrder {
   }
 
   // Update a purchase order
-  static async update(id, { supplier_id, status_id, purchase_order_date, subtotal, total_amount, notes, items }, userId) {
-    return this.executeWithTransaction(async (client) => {
+  static async update(id, { supplier_id, status_id, purchase_order_date, subtotal, total_amount, notes, items }, userId, client = null) {
+    if (client) {
       // Verify the order exists and belongs to user
       const existingOrder = await this.validatePurchaseOrder(id, userId, client);
       if (!existingOrder) {
@@ -202,7 +202,12 @@ class PurchaseOrder {
       }
       
       return purchaseOrder;
-    });
+    } else {
+      // Execute within a new transaction
+      return this.executeWithTransaction(async (client) => {
+        return await this.update(id, { supplier_id, status_id, purchase_order_date, subtotal, total_amount, notes, items }, userId, client);
+      });
+    }
   }
 
   // Delete a purchase order and update inventory
