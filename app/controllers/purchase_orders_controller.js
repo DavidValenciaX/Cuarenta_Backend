@@ -178,60 +178,30 @@ async function updateOrder(req, res) {
   
   
 
-  async function deleteOrder(req, res) {
-    const userId = req.usuario.userId;
-    const orderId = Number(req.params.id);
-    const client = await pool.connect();
-  
-    try {
-      await client.query('BEGIN');
-  
-      // Obtener todos los items de la orden
-      const { rows: items } = await client.query(
-        `SELECT product_id, quantity 
-           FROM public.purchase_order_products 
-         WHERE purchase_order_id = $1`,
-        [orderId]
-      );
-  
-      if (items.length === 0) {
-        await client.query('ROLLBACK');
-        return sendResponse(res, 404, 'error', 'Orden no encontrada o sin items');
-      }
-  
-      // Restar cantidad de cada producto
-      for (const { product_id, quantity } of items) {
-        await client.query(
-          `UPDATE public.products 
-             SET quantity = quantity - $1 
-           WHERE id = $2 AND user_id = $3`,
-          [quantity, product_id, userId]
-        );
-      }
-  
-      // Eliminar orden (cascade elimina purchase_order_products)
-      const { rows } = await client.query(
-        `DELETE FROM public.purchase_orders 
-         WHERE id = $1 AND user_id = $2 RETURNING *`,
-        [orderId, userId]
-      );
-  
-      if (!rows.length) {
-        await client.query('ROLLBACK');
-        return sendResponse(res, 404, 'error', 'Orden no encontrada');
-      }
-  
-      await client.query('COMMIT');
-      return sendResponse(res, 200, 'success', 'Orden eliminada exitosamente');
-    } catch (error) {
+async function deleteOrder(req, res) {
+  const userId = req.usuario.userId;
+  const orderId = Number(req.params.id);
+  const client = await pool.connect();
+
+  try {
+    await client.query('BEGIN');
+
+    const deletedOrder = await PurchaseOrder.deleteOrderById(client, orderId, userId);
+    
+    if (!deletedOrder) {
       await client.query('ROLLBACK');
-      console.error(error);
-      return sendResponse(res, 500, 'error', 'Error al eliminar orden');
-    } finally {
-      client.release();
+      return sendResponse(res, 404, 'error', 'Orden no encontrada o sin items');
     }
+
+    await client.query('COMMIT');
+    return sendResponse(res, 200, 'success', 'Orden eliminada exitosamente');
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error(error);
+    return sendResponse(res, 500, 'error', 'Error al eliminar orden');
+  } finally {
+    client.release();
   }
-  
+}
 
-
-module.exports = { createOrder, listOrders, getOrder, deleteOrder,updateOrder };
+module.exports = { createOrder, listOrders, getOrder, deleteOrder, updateOrder };

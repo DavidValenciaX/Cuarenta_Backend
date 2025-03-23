@@ -180,6 +180,39 @@ class PurchaseOrder {
   }
 }
 
+static async deleteOrderById(client, orderId, userId) {
+  // Get all items from the order
+  const { rows: items } = await client.query(
+    `SELECT product_id, quantity 
+       FROM public.purchase_order_products 
+     WHERE purchase_order_id = $1`,
+    [orderId]
+  );
+
+  if (items.length === 0) {
+    return null;
+  }
+
+  // Update each product's quantity
+  for (const { product_id, quantity } of items) {
+    await client.query(
+      `UPDATE public.products 
+         SET quantity = quantity - $1 
+       WHERE id = $2 AND user_id = $3`,
+      [quantity, product_id, userId]
+    );
+  }
+
+  // Delete the order (and its items via cascade)
+  const { rows } = await client.query(
+    `DELETE FROM public.purchase_orders 
+     WHERE id = $1 AND user_id = $2 RETURNING *`,
+    [orderId, userId]
+  );
+
+  return rows[0];
+}
+
 }
 
 
