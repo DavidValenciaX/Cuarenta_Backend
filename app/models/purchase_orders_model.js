@@ -55,38 +55,6 @@ class PurchaseOrder {
         );
         return rows[0];
       }
-      
-    
-  static async create({ supplier_id, status_id = null, purchase_order_date = null, notes = null, products, userId }) {
-    const client = await pool.connect();
-    try {
-      await client.query('BEGIN');
-      const { rows } = await client.query(
-        `INSERT INTO public.purchase_orders(user_id, supplier_id, status_id, purchase_order_date, notes)
-         VALUES($1,$2,$3,COALESCE($4,NOW()),$5) RETURNING *`,
-        [userId, supplier_id, status_id, purchase_order_date, notes]
-      );
-      const order = rows[0];
-
-      const insertItem = `INSERT INTO public.purchase_order_products(purchase_order_id, product_id, quantity, unit_price)
-                          VALUES($1,$2,$3,$4) RETURNING *`;
-      const items = [];
-      for (const p of products) {
-        const { rows: itemRows } = await client.query(insertItem, [
-          order.id, p.product_id, p.quantity, p.unit_price
-        ]);
-        items.push(itemRows[0]);
-      }
-
-      await client.query('COMMIT');
-      return { order, items };
-    } catch(err) {
-      await client.query('ROLLBACK');
-      throw err;
-    } finally {
-      client.release();
-    }
-  }
 
   static async findAllByUser(userId) {
     const { rows } = await pool.query(
