@@ -6,20 +6,17 @@ const { sendResponse } = require('../utils/response_util');
 // Create a sales order with its products
 async function createSalesOrder(req, res) {
   try {
-    const { customer_id, status_id, notes, items, order_date } = req.body;
     const userId = req.usuario.userId;
+    const { customer_id, status_id, notes, items, order_date } = req.body;
 
     // Validate required fields
     if (!customer_id || !status_id || !items || !Array.isArray(items) || items.length === 0) {
       return sendResponse(res, 400, 'error', 'Cliente, estado y al menos un producto son requeridos');
     }
-
-    // Execute all the validation and creation logic within a transaction
-    const salesOrder = await SalesOrder.executeWithTransaction(async (client) => {
       // Validate customer belongs to user
       const customer = await Customer.findById(customer_id, userId);
       if (!customer) {
-        throw new Error('Cliente no encontrado o no pertenece al usuario');
+        return sendResponse(res, 404, 'error', 'Cliente no encontrado o no pertenece al usuario');
       }
 
       // Validate all products belong to user and have sufficient stock
@@ -57,20 +54,14 @@ async function createSalesOrder(req, res) {
         totalAmount,
         notes,
         items,
-        order_date,
-        client
+        order_date
       });
 
       // Update product stock quantities
       for (const product of items) {
         // Subtract quantity (passing negative value to decrease stock)
-        await Product.updateStock(product.product_id, -product.quantity, userId, client);
+        await Product.updateStock(product.product_id, -product.quantity, userId);
       }
-
-      return salesOrder;
-    }).catch(error => {
-      throw error;
-    });
 
     return sendResponse(res, 201, 'success', 'Orden de venta creada exitosamente', salesOrder);
   } catch (error) {
