@@ -1,17 +1,29 @@
 const pool = require('../config/data_base');
 
 class SalesOrder {
+  // Utility method to execute operations within a transaction
+  static async executeWithTransaction(callback) {
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      const result = await callback(client);
+      await client.query('COMMIT');
+      return result;
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
   // Create a sales order with its products
   static async create({ userId, customerId, statusId, subtotal, totalAmount, notes, items, order_date, client }) {
-    // Start a transaction if no client is provided
-    const shouldReleaseClient = !client;
-    const dbClient = client || await pool.connect();
-    
-    try {
-      if (!client) await dbClient.query('BEGIN');
-      
+    // If client is provided, use it (part of an existing transaction)
+    // Otherwise create a new transaction
+    if (client) {
       // Insert the sales order
-      const orderResult = await dbClient.query(
+      const orderResult = await client.query(
         `INSERT INTO public.sales_orders(user_id, customer_id, status_id, subtotal, total_amount, notes, order_date)
          VALUES($1, $2, $3, $4, $5, $6, COALESCE($7, NOW())) RETURNING *`,
         [userId, customerId, statusId, subtotal, totalAmount, notes, order_date]
@@ -22,7 +34,7 @@ class SalesOrder {
       // Insert all the sales order products
       if (items && items.length > 0) {
         for (const product of items) {
-          await dbClient.query(
+          await client.query(
             `INSERT INTO public.sales_order_products(sales_order_id, product_id, quantity, unit_price)
              VALUES($1, $2, $3, $4)`,
             [salesOrder.id, product.productId, product.quantity, product.unitPrice]
@@ -30,15 +42,13 @@ class SalesOrder {
         }
       }
       
-      if (!client) await dbClient.query('COMMIT');
       return salesOrder;
-    } catch (error) {
-      if (!client) await dbClient.query('ROLLBACK');
-      throw error;
-    } finally {
-      if (shouldReleaseClient) {
-        dbClient.release();
-      }
+    } else {
+      // Execute within a new transaction
+      return this.executeWithTransaction(async (client) => {
+        const orderData = { userId, customerId, statusId, subtotal, totalAmount, notes, items, order_date, client };
+        return await this.create(orderData);
+      });
     }
   }
 
@@ -84,12 +94,7 @@ class SalesOrder {
 
   // Update a sales order
   static async update(id, { customerId, statusId, order_date, subtotal, totalAmount, notes, items }, userId, client = null) {
-    const shouldReleaseClient = !client;
-    const dbClient = client || await pool.connect();
-    
-    try {
-      if (!client) await dbClient.query('BEGIN');
-      
+    if (client) {
       // Build the update query based on whether order_date is provided
       let updateQuery = `
         UPDATE public.sales_orders
@@ -109,10 +114,9 @@ class SalesOrder {
       updateQuery += ` WHERE id = $${paramIndex} AND user_id = $${paramIndex + 1} RETURNING *`;
       queryParams.push(id, userId);
       
-      const orderResult = await dbClient.query(updateQuery, queryParams);
+      const orderResult = await client.query(updateQuery, queryParams);
       
       if (orderResult.rows.length === 0) {
-        if (!client) await dbClient.query('ROLLBACK');
         return null;
       }
       
@@ -121,14 +125,14 @@ class SalesOrder {
       // If items are provided, update the order products
       if (items && items.length > 0) {
         // Remove all existing products for this order
-        await dbClient.query(
+        await client.query(
           `DELETE FROM public.sales_order_products WHERE sales_order_id = $1`,
           [id]
         );
         
         // Insert all new products
         for (const item of items) {
-          await dbClient.query(
+          await client.query(
             `INSERT INTO public.sales_order_products(sales_order_id, product_id, quantity, unit_price)
              VALUES($1, $2, $3, $4)`,
             [id, item.productId, item.quantity, item.unitPrice]
@@ -136,27 +140,43 @@ class SalesOrder {
         }
       }
       
-      if (!client) await dbClient.query('COMMIT');
       return salesOrder;
-    } catch (error) {
-      if (!client) await dbClient.query('ROLLBACK');
-      throw error;
-    } finally {
-      if (shouldReleaseClient) {
-        dbClient.release();
-      }
+    } else {
+      // Execute within a new transaction
+      return this.executeWithTransaction(async (client) => {
+        return await this.update(id, { customerId, statusId, order_date, subtotal, totalAmount, notes, items }, userId, client);
+      });
     }
   }
 
   // Delete a sales order and its products (leveraging CASCADE)
   static async delete(id, userId) {
-    const { rows } = await pool.query(
-      `DELETE FROM public.sales_orders WHERE id = $1 AND user_id = $2 RETURNING *`,
-      [id, userId]
+    return this.executeWithTransaction(async (client) => {
+      const { rows } = await client.query(
+        `DELETE FROM public.sales_orders WHERE id = $1 AND user_id = $2 RETURNING *`,
+        [id, userId]
+      );
+      return rows[0];
+    });
+  }
+
+  // Validate customer and check if it belongs to user
+  static async validateCustomer(customerId, userId, client) {
+    const { rows } = await client.query(
+      `SELECT * FROM public.customers WHERE id = $1 AND user_id = $2`,
+      [customerId, userId]
     );
     return rows[0];
   }
 
+  // Validate sales order exists and belongs to user
+  static async validateSalesOrder(orderId, userId, client) {
+    const { rows } = await client.query(
+      `SELECT * FROM public.sales_orders WHERE id = $1 AND user_id = $2`,
+      [orderId, userId]
+    );
+    return rows[0];
+  }
 }
 
 module.exports = SalesOrder;
