@@ -76,10 +76,15 @@ router.use(verificarToken);
  *             required:
  *               - supplier_id
  *               - items
+ *               - status_id
  *             properties:
  *               supplier_id:
  *                 type: integer
  *                 example: 3
+ *               status_id:
+ *                 type: integer
+ *                 description: Estado de la orden de compra
+ *                 example: 1
  *               purchase_order_date:
  *                 type: string
  *                 format: date-time
