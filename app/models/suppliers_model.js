@@ -1,11 +1,11 @@
 const pool = require('../config/data_base');
 
 class Supplier {
-  static async create({ name, email, phone, address, notes, userId }) {
+  static async create({ name, email, phone, address, userId }) {
     const result = await pool.query(
-      `INSERT INTO public.suppliers(name, email, phone, address, notes, user_id)
-       VALUES($1,$2,$3,$4,$5,$6) RETURNING *`,
-      [name,email,phone,address,notes,userId]
+      `INSERT INTO public.suppliers(name, email, phone, address, user_id)
+       VALUES($1,$2,$3,$4,$5) RETURNING *`,
+      [name,email,phone,address,userId]
     );
     return result.rows[0];
   }
@@ -43,11 +43,11 @@ class Supplier {
   }
   
 
-  static async update(id,{ name,email,phone,address,notes },userId) {
+  static async update(id,{ name,email,phone,address },userId) {
     const { rows } = await pool.query(
-      `UPDATE public.suppliers SET name=$1,email=$2,phone=$3,address=$4,notes=$5
-       WHERE id=$6 AND user_id=$7 RETURNING *`,
-      [name,email,phone,address,notes,id,userId]
+      `UPDATE public.suppliers SET name=$1,email=$2,phone=$3,address=$4
+       WHERE id=$5 AND user_id=$6 RETURNING *`,
+      [name,email,phone,address,id,userId]
     );
     return rows[0];
   }

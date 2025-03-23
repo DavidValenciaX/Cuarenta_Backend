@@ -6,7 +6,7 @@ function normalize(str) {
 }
 
 async function createSupplier(req,res) {
-  let { name,email,phone,address,notes } = req.body;
+  let { name,email,phone,address } = req.body;
   const userId = req.usuario.userId;
   if (!name||!email||!phone||!address) 
     return sendResponse(res,400,'error','Todos los campos requeridos');
@@ -20,7 +20,7 @@ async function createSupplier(req,res) {
   if(await Supplier.findByNameAndUser(name,userId))
     return sendResponse(res,409,'error','Ya existe un proveedor con ese nombre');
 
-  const supplier = await Supplier.create({ name,email,phone,address,notes,userId });
+  const supplier = await Supplier.create({ name,email,phone,address,userId });
   return sendResponse(res,201,'success','Proveedor creado',supplier);
 }
 
@@ -36,7 +36,7 @@ async function getSupplier(req,res) {
 }
 
 async function updateSupplier(req,res) {
-  let { name,email,phone,address,notes } = req.body;
+  let { name,email,phone,address } = req.body;
   const userId = req.usuario.userId;
   const id = Number(req.params.id);
   name = normalize(name);
@@ -50,7 +50,7 @@ async function updateSupplier(req,res) {
   if(byName && byName.id!==id)
     return sendResponse(res,409,'error','Ya existe un proveedor con ese nombre');
 
-  const updated = await Supplier.update(id,{ name,email,phone,address,notes },userId);
+  const updated = await Supplier.update(id,{ name,email,phone,address },userId);
   if(!updated) return sendResponse(res,404,'error','Proveedor no encontrado');
   return sendResponse(res,200,'success','Proveedor actualizado',updated);
 }

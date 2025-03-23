@@ -34,9 +34,6 @@ router.use(verificarToken);
  *         address:
  *           type: string
  *           description: Dirección del proveedor
- *         notes:
- *           type: string
- *           description: Notas adicionales
  *         user_id:
  *           type: integer
  *           description: ID del usuario propietario
@@ -82,9 +79,6 @@ router.use(verificarToken);
  *               address:
  *                 type: string
  *                 example: "Calle 123 #45-67"
- *               notes:
- *                 type: string
- *                 example: "Notas adicionales"
  *     responses:
  *       201:
  *         description: Proveedor creado exitosamente
@@ -173,8 +167,6 @@ router.get('/:id', getSupplier);
  *               phone:
  *                 type: string
  *               address:
- *                 type: string
- *               notes:
  *                 type: string
  *     responses:
  *       200:
