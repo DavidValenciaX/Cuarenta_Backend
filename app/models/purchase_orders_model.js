@@ -23,14 +23,14 @@ class PurchaseOrder {
     // Otherwise create a new transaction
     if (client) {
       // Insert the purchase order
-      const order = await client.query(
+      const purchaseOrderResult = await client.query(
         `INSERT INTO public.purchase_orders(user_id, supplier_id, status_id, subtotal, total_amount, purchase_order_date, notes)
          VALUES ($1, $2, $3, $4, $5, COALESCE($6, NOW()), $7)
          RETURNING *`,
         [userId, supplier_id, status_id, subtotal, total_amount, purchase_order_date, notes]
       );
       
-      const purchaseOrder = order.rows[0];
+      const purchaseOrder = purchaseOrderResult.rows[0];
       
       // Insert all the purchase order products
       if (items && items.length > 0) {
@@ -56,7 +56,7 @@ class PurchaseOrder {
           
           const currentUnitPrice = result.rows[0].unit_price;
           
-          // Check if this order is the most recent one for this product
+          // Check if this purchase order is the most recent one for this product
           const { rows: [latest] } = await client.query(
             `SELECT po.id
              FROM public.purchase_orders po
@@ -131,9 +131,9 @@ class PurchaseOrder {
   // Update a purchase order
   static async update(id, { supplier_id, status_id, purchase_order_date, subtotal, total_amount, notes, items }, userId, client = null) {
     if (client) {
-      // Verify the order exists and belongs to user
-      const existingOrder = await this.validatePurchaseOrder(id, userId, client);
-      if (!existingOrder) {
+      // Verify the purchase order exists and belongs to user
+      const existingPurchaseOrder = await this.validatePurchaseOrder(id, userId, client);
+      if (!existingPurchaseOrder) {
         return null;
       }
 
@@ -213,7 +213,7 @@ class PurchaseOrder {
   // Delete a purchase order and update inventory
   static async delete(id, userId) {
     return this.executeWithTransaction(async (client) => {
-      // Get all items from the order
+      // Get all items from the purchase order
       const { rows: items } = await client.query(
         `SELECT product_id, quantity FROM public.purchase_order_products WHERE purchase_order_id = $1`,
         [id]

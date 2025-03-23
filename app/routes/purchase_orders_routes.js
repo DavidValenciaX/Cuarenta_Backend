@@ -2,11 +2,11 @@ const express = require('express');
 const router = express.Router();
 const { verificarToken } = require('../middlewares/auth_middleware');
 const {
-  createOrder,
-  listOrders,
-  getOrder,
-  updateOrder,
-  deleteOrder
+  createPurchaseOrder,
+  listPurchaseOrders,
+  getPurchaseOrder,
+  updatePurchaseOrder,
+  deletePurchaseOrder
 } = require('../controllers/purchase_orders_controller');
 
 router.use(verificarToken);
@@ -82,7 +82,7 @@ router.use(verificarToken);
  *       500:
  *         description: Error interno del servidor
  */
-router.post('/', createOrder);
+router.post('/', createPurchaseOrder);
 
 /**
  * @swagger
@@ -98,7 +98,7 @@ router.post('/', createOrder);
  *       401:
  *         description: Token inválido o expirado
  */
-router.get('/', listOrders);
+router.get('/', listPurchaseOrders);
 
 /**
  * @swagger
@@ -123,7 +123,7 @@ router.get('/', listOrders);
  *       404:
  *         description: Orden no encontrada
  */
-router.get('/:id', getOrder);
+router.get('/:id', getPurchaseOrder);
 
 /**
  * @swagger
@@ -193,7 +193,7 @@ router.get('/:id', getOrder);
  *       404:
  *         description: Orden no encontrada
  */
-router.put('/:id', updateOrder);
+router.put('/:id', updatePurchaseOrder);
 
 /**
  * @swagger
@@ -218,6 +218,6 @@ router.put('/:id', updateOrder);
  *       404:
  *         description: Orden no encontrada
  */
-router.delete('/:id', deleteOrder);
+router.delete('/:id', deletePurchaseOrder);
 
 module.exports = router;

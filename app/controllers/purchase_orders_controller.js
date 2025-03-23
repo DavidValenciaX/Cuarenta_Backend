@@ -10,7 +10,7 @@ function toNumber(value) {
 }
 
 // Create a purchase order with its products
-async function createOrder(req, res) {
+async function createPurchaseOrder(req, res) {
   try {
     const userId = req.usuario.userId;
     const { supplier_id, status_id, purchase_order_date, notes, items } = req.body;
@@ -73,11 +73,11 @@ async function createOrder(req, res) {
 }
 
 // Get all purchase orders for a user
-async function listOrders(req, res) {
+async function listPurchaseOrders(req, res) {
   try {
     const userId = req.usuario.userId;
-    const orders = await PurchaseOrder.findAllByUser(userId);
-    return sendResponse(res, 200, 'success', 'Órdenes obtenidas', orders);
+    const purchaseOrders = await PurchaseOrder.findAllByUser(userId);
+    return sendResponse(res, 200, 'success', 'Órdenes de compra obtenidas', purchaseOrders);
   } catch (error) {
     console.error('Error al listar órdenes de compra:', error);
     return sendResponse(res, 500, 'error', 'Error interno del servidor');
@@ -85,22 +85,22 @@ async function listOrders(req, res) {
 }
 
 // Get a specific purchase order with its products
-async function getOrder(req, res) {
+async function getPurchaseOrder(req, res) {
   try {
-    const orderId = req.params.id;
+    const purchaseOrderId = req.params.id;
     const userId = req.usuario.userId;
     
-    const order = await PurchaseOrder.findById(orderId, userId);
-    if (!order) {
+    const purchaseOrder = await PurchaseOrder.findById(purchaseOrderId, userId);
+    if (!purchaseOrder) {
       return sendResponse(res, 404, 'error', 'Orden de compra no encontrada');
     }
     
     // Get the products for this purchase order
-    const products = await PurchaseOrder.getProducts(orderId, userId);
+    const products = await PurchaseOrder.getProducts(purchaseOrderId, userId);
     
     // Combine order and products data
     const result = {
-      ...order,
+      ...purchaseOrder,
       products
     };
     
@@ -112,10 +112,10 @@ async function getOrder(req, res) {
 }
 
 // Update a purchase order
-async function updateOrder(req, res) {
+async function updatePurchaseOrder(req, res) {
   try {
     const userId = req.usuario.userId;
-    const orderId = Number(req.params.id);
+    const purchaseOrderId = Number(req.params.id);
     const { supplier_id, status_id, purchase_order_date, notes, items } = req.body;
 
     // Validate required fields
@@ -129,9 +129,9 @@ async function updateOrder(req, res) {
       return sendResponse(res, 404, 'error', 'Proveedor inválido');
     }
 
-    // Validate order
-    const order = await PurchaseOrder.findById(orderId, userId);
-    if (!order) {
+    // Validate purchase order
+    const purchaseOrder = await PurchaseOrder.findById(purchaseOrderId, userId);
+    if (!purchaseOrder) {
       return sendResponse(res, 404, 'error', 'Orden de compra no encontrada');
     }
 
@@ -163,7 +163,7 @@ async function updateOrder(req, res) {
     const total_amount = subtotal;
 
     // Update the purchase order
-    const updatedOrder = await PurchaseOrder.update(orderId, {
+    const updatedPurchaseOrder = await PurchaseOrder.update(purchaseOrderId, {
       supplier_id,
       status_id,
       purchase_order_date,
@@ -173,11 +173,11 @@ async function updateOrder(req, res) {
       items: validatedItems
     }, userId);
 
-    if (!updatedOrder) {
+    if (!updatedPurchaseOrder) {
       return sendResponse(res, 404, 'error', 'Orden de compra no encontrada');
     }
 
-    return sendResponse(res, 200, 'success', 'Orden de compra actualizada', updatedOrder);
+    return sendResponse(res, 200, 'success', 'Orden de compra actualizada', updatedPurchaseOrder);
   } catch (error) {
     console.error('Error al actualizar orden de compra:', error);
     return sendResponse(res, 500, 'error', error.message || 'Error interno del servidor');
@@ -185,14 +185,14 @@ async function updateOrder(req, res) {
 }
 
 // Delete a purchase order
-async function deleteOrder(req, res) {
+async function deletePurchaseOrder(req, res) {
   try {
     const userId = req.usuario.userId;
-    const orderId = Number(req.params.id);
+    const purchaseOrderId = Number(req.params.id);
 
-    const deletedOrder = await PurchaseOrder.delete(orderId, userId);
+    const deletedPurchaseOrder = await PurchaseOrder.delete(purchaseOrderId, userId);
     
-    if (!deletedOrder) {
+    if (!deletedPurchaseOrder) {
       return sendResponse(res, 404, 'error', 'Orden de compra no encontrada');
     }
 
@@ -203,4 +203,10 @@ async function deleteOrder(req, res) {
   }
 }
 
-module.exports = { createOrder, listOrders, getOrder, deleteOrder, updateOrder };
+module.exports = { 
+  createPurchaseOrder, 
+  listPurchaseOrders, 
+  getPurchaseOrder, 
+  deletePurchaseOrder, 
+  updatePurchaseOrder 
+};

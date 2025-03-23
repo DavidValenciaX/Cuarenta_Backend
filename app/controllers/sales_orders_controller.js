@@ -240,8 +240,8 @@ async function updateSalesOrder(req, res) {
 // Delete a sales order
 async function deleteSalesOrder(req, res) {
   try {
-    const orderId = req.params.id;
     const userId = req.usuario.userId;
+    const orderId = req.params.id;
 
     const deleted = await SalesOrder.delete(orderId, userId);
     if (!deleted) {
