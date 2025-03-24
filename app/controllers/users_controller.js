@@ -9,9 +9,7 @@ const { sendEmail } = require('../utils/email_util');
 const { getConfirmationEmailTemplate, getRecoveryEmailTemplate } = require('../utils/email_templates');
 
 const jwt = require('jsonwebtoken'); 
-
 const moment = require('moment-timezone');
-
 
 //Funcion para crear usuario
 async function createUser(req, res) {
@@ -53,16 +51,14 @@ async function createUser(req, res) {
       getConfirmationEmailTemplate(fullName, confirmationTokenHash)
     );
     
-
     return sendResponse(res, 201, 'success', 'Usuario creado, código de confirmación enviado al correo', {
-        user_id: newUser.id
+        userId: newUser.id
       });
     } catch (error) {
       console.error('Error en crearUsuario:', error);
       return sendResponse(res, 500, 'error', 'Error al registrar usuario');
     }
 }
-
 
 //Funcion para confirmar correo
 async function confirmEmail(req, res) {
@@ -78,7 +74,7 @@ async function confirmEmail(req, res) {
       }
   
       const now = moment().tz('America/Bogota');
-      if (moment(user.confirmation_token_expiration).isBefore(now)) {
+      if (moment(user.confirmationTokenExpiration).isBefore(now)) {
         // Token vencido -> Generar uno nuevo  reenvío
         const newToken = generateToken();
         const newExpiration = moment().tz('America/Bogota').add(1, 'hour').format();
@@ -100,7 +96,6 @@ async function confirmEmail(req, res) {
     }
   }
   
-
   //Funcion para iniciar sesion
   async function loginUser(req, res) {
     try {
@@ -122,7 +117,7 @@ async function confirmEmail(req, res) {
       }
 
       // Comparar password ingresada con el hash en DB
-      const isMatch = await bcrypt.compare(password, user.password_hash);
+      const isMatch = await bcrypt.compare(password, user.passwordHash);
       if (!isMatch) {
         return sendResponse(res, 401, 'error', 'Credenciales inválidas');
       }
@@ -130,7 +125,7 @@ async function confirmEmail(req, res) {
       // Generar JWT con user ID 
       // Comentario en español: Se recomienda guardar la clave secreta en process.env.JWT_SECRET
       const token = jwt.sign(
-        { user_id: user.id }, 
+        { userId: user.id }, 
         process.env.JWT_SECRET, 
         { expiresIn: '5h' } // El token expira en 5 hora
       );
@@ -147,7 +142,6 @@ async function confirmEmail(req, res) {
 //Cerrar sesion
 async function logoutUser(req, res) {
     try {
-
       const token = req.headers['authorization'];
       if (!token) {
         return sendResponse(res, 400, 'error', 'Verificacion no aportada');
@@ -186,7 +180,7 @@ async function logoutUser(req, res) {
       await sendEmail(
         email,
         'Recupera tu contraseña',
-        getRecoveryEmailTemplate(user.full_name || email, resetTokenHash)
+        getRecoveryEmailTemplate(user.fullName || email, resetTokenHash)
       );
       
       return sendResponse(res, 200, 'success', 'Código de recuperacion enviado exitosamente', {
@@ -223,7 +217,7 @@ async function resetPassword(req, res) {
   
       // Verificar expiración
       const now = moment().tz('America/Bogota');
-      if (moment(user.password_reset_token_expiration).isBefore(now)) {
+      if (moment(user.passwordResetTokenExpiration).isBefore(now)) {
         return sendResponse(res, 400, 'error', 'Token expirado');
       }
   
@@ -240,6 +234,4 @@ async function resetPassword(req, res) {
     }
   }
   
-  
-
-module.exports = { createUser, confirmEmail, loginUser, logoutUser,forgotPassword,resetPassword };
+module.exports = { createUser, confirmEmail, loginUser, logoutUser, forgotPassword, resetPassword };

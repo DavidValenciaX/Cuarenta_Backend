@@ -1,11 +1,11 @@
 const pool = require('../config/data_base');
 
 class Customer {
-  static async create({ name, email, phone, address, user_id }) {
+  static async create({ name, email, phone, address, userId }) {
     const result = await pool.query(
       `INSERT INTO public.customers(name, email, phone, address, user_id)
        VALUES($1, $2, $3, $4, $5) RETURNING *`,
-      [name, email, phone, address, user_id]
+      [name, email, phone, address, userId]
     );
     return result.rows[0];
   }

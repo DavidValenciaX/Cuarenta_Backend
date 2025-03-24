@@ -12,7 +12,7 @@ function toNumber(value) {
 // Create a purchase order with its products
 async function createPurchaseOrder(req, res) {
   try {
-    const user_id = req.usuario.user_id;
+    const user_id = req.usuario.userId;
     const { supplier_id, status_id, purchase_order_date, notes, items } = req.body;
   
     // Validate required fields
@@ -72,7 +72,7 @@ async function createPurchaseOrder(req, res) {
 // Get all purchase orders for a user
 async function listPurchaseOrders(req, res) {
   try {
-    const user_id = req.usuario.user_id;
+    const user_id = req.usuario.userId;
     const purchaseOrders = await PurchaseOrder.findAllByUser(user_id);
     return sendResponse(res, 200, 'success', 'Órdenes de compra obtenidas', purchaseOrders);
   } catch (error) {
@@ -85,7 +85,7 @@ async function listPurchaseOrders(req, res) {
 async function getPurchaseOrder(req, res) {
   try {
     const purchaseOrderId = req.params.id;
-    const user_id = req.usuario.user_id;
+    const user_id = req.usuario.userId;
     
     const purchaseOrder = await PurchaseOrder.findById(purchaseOrderId, user_id);
     if (!purchaseOrder) {
@@ -111,7 +111,7 @@ async function getPurchaseOrder(req, res) {
 // Update a purchase order
 async function updatePurchaseOrder(req, res) {
   try {
-    const user_id = req.usuario.user_id;
+    const user_id = req.usuario.userId;
     const purchaseOrderId = Number(req.params.id);
     const { supplier_id, status_id, purchase_order_date, notes, items } = req.body;
 
@@ -181,7 +181,7 @@ async function updatePurchaseOrder(req, res) {
 // Delete a purchase order
 async function deletePurchaseOrder(req, res) {
   try {
-    const user_id = req.usuario.user_id;
+    const user_id = req.usuario.userId;
     const purchaseOrderId = Number(req.params.id);
 
     const deletedPurchaseOrder = await PurchaseOrder.delete(purchaseOrderId, user_id);

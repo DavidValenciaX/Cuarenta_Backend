@@ -15,7 +15,7 @@ async function createProduct(req, res) {
     category_id, unit_of_measure_id,
     quantity, barcode
   } = req.body;
-  const user_id = req.usuario.user_id;
+  const user_id = req.usuario.userId;
 
   // Campos requeridos
   if (!name || unit_price == null || unit_cost == null || !category_id || !unit_of_measure_id) {
@@ -72,7 +72,7 @@ async function updateProduct(req, res) {
     category_id, unit_of_measure_id,
     quantity, barcode
   } = req.body;
-  const user_id = req.usuario.user_id;
+  const user_id = req.usuario.userId;
 
   if (!name || unit_price == null || unit_cost == null || !category_id || !unit_of_measure_id) {
     return sendResponse(res, 400, 'error', 'Faltan campos requeridos');
@@ -119,18 +119,18 @@ async function updateProduct(req, res) {
 }
 
 async function listProducts(req, res) {
-  const products = await Product.findAllByUser(req.usuario.user_id);
+  const products = await Product.findAllByUser(req.usuario.userId);
   return sendResponse(res, 200, 'success', 'Productos obtenidos', products);
 }
 
 async function getProduct(req, res) {
-  const product = await Product.findById(req.params.id, req.usuario.user_id);
+  const product = await Product.findById(req.params.id, req.usuario.userId);
   if (!product) return sendResponse(res, 404, 'error', 'Producto no encontrado');
   return sendResponse(res, 200, 'success', 'Producto encontrado', product);
 }
 
 async function deleteProduct(req, res) {
-  const deleted = await Product.delete(req.params.id, req.usuario.user_id);
+  const deleted = await Product.delete(req.params.id, req.usuario.userId);
   if (!deleted) return sendResponse(res, 404, 'error', 'Producto no encontrado');
   return sendResponse(res, 200, 'success', 'Producto eliminado');
 }

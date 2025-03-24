@@ -7,7 +7,7 @@ function normalizeName(name) {
 
 async function createCategory(req, res) {
   let { name } = req.body;
-  const userId = req.usuario.user_id;
+  const userId = req.usuario.userId;
   if (!name) return sendResponse(res, 400, 'error', 'El nombre es requerido');
 
   name = normalizeName(name);
@@ -21,14 +21,14 @@ async function createCategory(req, res) {
 }
 
 async function listCategories(req, res) {
-  const userId = req.usuario.user_id;
+  const userId = req.usuario.userId;
   const categories = await Category.findAllByUser(userId);
   return sendResponse(res, 200, 'success', 'Categorías obtenidas', categories);
 }
 
 async function getCategory(req, res) {
   const { id } = req.params;
-  const userId = req.usuario.user_id;
+  const userId = req.usuario.userId;
   const category = await Category.findById(id, userId);
   if (!category) return sendResponse(res, 404, 'error', 'Categoría no encontrada');
   return sendResponse(res, 200, 'success', 'Categoría encontrada', category);
@@ -37,7 +37,7 @@ async function getCategory(req, res) {
 async function updateCategory(req, res) {
     const { id } = req.params;
     let { name } = req.body;
-    const userId = req.usuario.user_id;
+    const userId = req.usuario.userId;
     if (!name) return sendResponse(res, 400, 'error', 'El nombre es requerido');
   
     name = normalizeName(name);
@@ -54,7 +54,7 @@ async function updateCategory(req, res) {
 
 async function deleteCategory(req, res) {
   const { id } = req.params;
-  const userId = req.usuario.user_id;
+  const userId = req.usuario.userId;
   const deleted = await Category.delete(id, userId);
   if (!deleted) return sendResponse(res, 404, 'error', 'Categoría no encontrada');
   return sendResponse(res, 200, 'success', 'Categoría eliminada');

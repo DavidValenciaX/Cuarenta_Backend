@@ -12,7 +12,7 @@ function toNumber(value) {
 // Create a sales order with its products
 async function createSalesOrder(req, res) {
   try {
-    const user_id = req.usuario.user_id;
+    const user_id = req.usuario.userId;
     const { customer_id, status_id, sales_order_date, notes, items } = req.body;
 
     // Validate required fields
@@ -78,7 +78,7 @@ async function createSalesOrder(req, res) {
 // Get all sales orders for a user
 async function listSalesOrders(req, res) {
   try {
-    const user_id = req.usuario.user_id;
+    const user_id = req.usuario.userId;
     const salesOrders = await SalesOrder.findAllByUser(user_id);
     return sendResponse(res, 200, 'success', 'Órdenes de venta obtenidas', salesOrders);
   } catch (error) {
@@ -91,7 +91,7 @@ async function listSalesOrders(req, res) {
 async function getSalesOrder(req, res) {
   try {
     const salesOrderId = req.params.id;
-    const user_id = req.usuario.user_id;
+    const user_id = req.usuario.userId;
 
     const salesOrder = await SalesOrder.findById(salesOrderId, user_id);
     if (!salesOrder) {
@@ -117,7 +117,7 @@ async function getSalesOrder(req, res) {
 // Update a sales order
 async function updateSalesOrder(req, res) {
   try {
-    const user_id = req.usuario.user_id;
+    const user_id = req.usuario.userId;
     const salesOrderId = req.params.id;
     const { customer_id, status_id, sales_order_date, notes, items } = req.body;
 
@@ -211,7 +211,7 @@ async function updateSalesOrder(req, res) {
 // Delete a sales order
 async function deleteSalesOrder(req, res) {
   try {
-    const user_id = req.usuario.user_id;
+    const user_id = req.usuario.userId;
     const salesOrderId = req.params.id;
 
     const deleted = await SalesOrder.delete(salesOrderId, user_id);
