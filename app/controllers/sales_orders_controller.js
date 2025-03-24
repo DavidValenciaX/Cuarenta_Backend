@@ -12,58 +12,58 @@ function toNumber(value) {
 // Create a sales order with its products
 async function createSalesOrder(req, res) {
   try {
-    const user_id = req.usuario.userId;
-    const { customer_id, status_id, sales_order_date, notes, items } = req.body;
+    const userId = req.usuario.userId;
+    const { customerId, statusId, salesOrderDate, notes, items } = req.body;
 
     // Validate required fields
-    if (!customer_id || status_id == null || !Array.isArray(items) || items.length === 0) {
+    if (!customerId || statusId == null || !Array.isArray(items) || items.length === 0) {
       return sendResponse(res, 400, 'error', 'Cliente, estado y al menos un producto son requeridos');
     }
     
     // Validate customer
-    const customer = await Customer.findById(customer_id, user_id);
+    const customer = await Customer.findById(customerId, userId);
     if (!customer) {
       return sendResponse(res, 404, 'error', 'Cliente no encontrado o no pertenece al usuario');
     }
 
     // Calculate total amount directly and validate products
-    let total_amount = 0;
+    let totalAmount = 0;
     const validatedItems = [];
     
     for (const item of items) {
       const qty = toNumber(item.quantity);
-      const price = toNumber(item.unit_price);
+      const price = toNumber(item.unitPrice);
       
       if (!qty || qty <= 0 || price === null || price <= 0) {
         return sendResponse(res, 400, 'error', 'Cantidad y precio unitario inválidos');
       }
       
-      const product = await Product.findById(item.product_id, user_id);
+      const product = await Product.findById(item.productId, userId);
       if (!product) {
-        return sendResponse(res, 404, 'error', `Producto con ID ${item.product_id} no encontrado o no pertenece al usuario`);
+        return sendResponse(res, 404, 'error', `Producto con ID ${item.productId} no encontrado o no pertenece al usuario`);
       }
       
       // Check if product has sufficient stock
-      const hasSufficientStock = await Product.hasSufficientStock(item.product_id, qty, user_id);
+      const hasSufficientStock = await Product.hasSufficientStock(item.productId, qty, userId);
       if (!hasSufficientStock) {
-        return sendResponse(res, 400, 'error', `Producto con ID ${item.product_id} no tiene suficiente stock disponible`);
+        return sendResponse(res, 400, 'error', `Producto con ID ${item.productId} no tiene suficiente stock disponible`);
       }
       
-      total_amount += qty * price;
+      totalAmount += qty * price;
       validatedItems.push({
-        product_id: item.product_id,
+        productId: item.productId,
         quantity: qty,
-        unit_price: price
+        unitPrice: price
       });
     }
 
     // Create the sales order
     const salesOrder = await SalesOrder.create({
-      user_id,
-      customer_id,
-      status_id,
-      total_amount,
-      sales_order_date,
+      userId,
+      customerId,
+      statusId,
+      totalAmount,
+      salesOrderDate,
       notes,
       items: validatedItems
     });
@@ -78,8 +78,8 @@ async function createSalesOrder(req, res) {
 // Get all sales orders for a user
 async function listSalesOrders(req, res) {
   try {
-    const user_id = req.usuario.userId;
-    const salesOrders = await SalesOrder.findAllByUser(user_id);
+    const userId = req.usuario.userId;
+    const salesOrders = await SalesOrder.findAllByUser(userId);
     return sendResponse(res, 200, 'success', 'Órdenes de venta obtenidas', salesOrders);
   } catch (error) {
     console.error('Error al listar órdenes de venta:', error);
@@ -91,15 +91,15 @@ async function listSalesOrders(req, res) {
 async function getSalesOrder(req, res) {
   try {
     const salesOrderId = req.params.id;
-    const user_id = req.usuario.userId;
+    const userId = req.usuario.userId;
 
-    const salesOrder = await SalesOrder.findById(salesOrderId, user_id);
+    const salesOrder = await SalesOrder.findById(salesOrderId, userId);
     if (!salesOrder) {
       return sendResponse(res, 404, 'error', 'Orden de venta no encontrada');
     }
 
     // Get the products for this sales order
-    const products = await SalesOrder.getProducts(salesOrderId, user_id);
+    const products = await SalesOrder.getProducts(salesOrderId, userId);
     
     // Combine order and products data
     const result = {
@@ -117,85 +117,85 @@ async function getSalesOrder(req, res) {
 // Update a sales order
 async function updateSalesOrder(req, res) {
   try {
-    const user_id = req.usuario.userId;
+    const userId = req.usuario.userId;
     const salesOrderId = req.params.id;
-    const { customer_id, status_id, sales_order_date, notes, items } = req.body;
+    const { customerId, statusId, salesOrderDate, notes, items } = req.body;
 
     // Validate required fields
-    if (!customer_id || status_id == null || !Array.isArray(items) || items.length === 0) {
+    if (!customerId || statusId == null || !Array.isArray(items) || items.length === 0) {
       return sendResponse(res, 400, 'error', 'Cliente, estado y al menos un producto son requeridos');
     }
 
     // Validate customer belongs to user
-    const customer = await Customer.findById(customer_id, user_id);
+    const customer = await Customer.findById(customerId, userId);
     if (!customer) {
       return sendResponse(res, 404, 'error', 'Cliente no encontrado o no pertenece al usuario');
     }
 
     // Validate the order exists
-    const existingSalesOrder = await SalesOrder.findById(salesOrderId, user_id);
+    const existingSalesOrder = await SalesOrder.findById(salesOrderId, userId);
     if (!existingSalesOrder) {
       return sendResponse(res, 404, 'error', 'Orden de venta no encontrada');
     }
 
     // Get existing products for this order to calculate inventory changes
-    const existingProducts = await SalesOrder.getProducts(salesOrderId, user_id);
+    const existingProducts = await SalesOrder.getProducts(salesOrderId, userId);
     
     // Create a map of existing products for easier comparison
     const existingProductsMap = {};
     existingProducts.forEach(product => {
-      existingProductsMap[product.product_id] = {
+      existingProductsMap[product.productId] = {
         quantity: product.quantity,
-        product_id: product.product_id
+        productId: product.productId
       };
     });
 
-    // Calculate total_amount and validate products
-    let total_amount = 0;
+    // Calculate totalAmount and validate products
+    let totalAmount = 0;
     const validatedItems = [];
     
     for (const item of items) {
       const qty = toNumber(item.quantity);
-      const price = toNumber(item.unit_price);
+      const price = toNumber(item.unitPrice);
       
       if (!qty || qty <= 0 || price === null || price <= 0) {
         return sendResponse(res, 400, 'error', 'Cantidad y precio unitario inválidos');
       }
       
-      const product = await Product.findById(item.product_id, user_id);
+      const product = await Product.findById(item.productId, userId);
       if (!product) {
-        return sendResponse(res, 404, 'error', `Producto con ID ${item.product_id} no encontrado o no pertenece al usuario`);
+        return sendResponse(res, 404, 'error', `Producto con ID ${item.productId} no encontrado o no pertenece al usuario`);
       }
       
       // Check inventory for increased quantities
-      const existingQty = existingProductsMap[item.product_id] ? existingProductsMap[item.product_id].quantity : 0;
+      const existingQty = existingProductsMap[item.productId] ? existingProductsMap[item.productId].quantity : 0;
       const qtyDifference = qty - existingQty;
       
       if (qtyDifference > 0) {
         // Need to check if we have enough inventory for the increased amount
-        const hasSufficientStock = await Product.hasSufficientStock(item.product_id, qtyDifference, user_id);
+        const hasSufficientStock = await Product.hasSufficientStock(item.productId, qtyDifference, userId);
         if (!hasSufficientStock) {
-          return sendResponse(res, 400, 'error', `Producto con ID ${item.product_id} no tiene suficiente stock disponible para el incremento solicitado`);
+          return sendResponse(res, 400, 'error', `Producto con ID ${item.productId} no tiene suficiente stock disponible para el incremento solicitado`);
         }
       }
       
-      total_amount += qty * price;
+      totalAmount += qty * price;
       validatedItems.push({
-        product_id: item.product_id,
+        productId: item.productId,
         quantity: qty,
-        unit_price: price
+        unitPrice: price
       });
     }
 
     // Update the sales order
     const updated = await SalesOrder.update(salesOrderId, {
-      customer_id,
-      status_id,
-      sales_order_date,
-      total_amount,
+      customerId,
+      statusId,
+      salesOrderDate,
+      totalAmount,
       notes,
       items: validatedItems
-    }, user_id);
+    }, userId);
     
     if (!updated) {
       return sendResponse(res, 404, 'error', 'No se pudo actualizar la orden de venta');
@@ -211,10 +211,10 @@ async function updateSalesOrder(req, res) {
 // Delete a sales order
 async function deleteSalesOrder(req, res) {
   try {
-    const user_id = req.usuario.userId;
+    const userId = req.usuario.userId;
     const salesOrderId = req.params.id;
 
-    const deleted = await SalesOrder.delete(salesOrderId, user_id);
+    const deleted = await SalesOrder.delete(salesOrderId, userId);
     if (!deleted) {
       return sendResponse(res, 404, 'error', 'Orden de venta no encontrada');
     }

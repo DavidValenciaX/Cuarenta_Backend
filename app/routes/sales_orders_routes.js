@@ -33,18 +33,18 @@ router.use(verificarToken);
  *           schema:
  *             type: object
  *             required:
- *               - customer_id
- *               - status_id
+ *               - customerId
+ *               - statusId
  *               - items
  *             properties:
- *               customer_id:
+ *               customerId:
  *                 type: integer
  *                 example: 1
- *               status_id:
+ *               statusId:
  *                 type: integer
  *                 description: Estado de la orden de venta
  *                 example: 1
- *               sales_order_date:
+ *               salesOrderDate:
  *                 type: string
  *                 format: date-time
  *                 example: "2023-06-15T10:00:00Z"
@@ -56,17 +56,17 @@ router.use(verificarToken);
  *                 items:
  *                   type: object
  *                   required:
- *                     - product_id
+ *                     - productId
  *                     - quantity
- *                     - unit_price
+ *                     - unitPrice
  *                   properties:
- *                     product_id:
+ *                     productId:
  *                       type: integer
  *                       example: 1
  *                     quantity:
  *                       type: integer
  *                       example: 5
- *                     unit_price:
+ *                     unitPrice:
  *                       type: number
  *                       format: decimal
  *                       example: 200.00
@@ -147,20 +147,20 @@ router.get('/:id', getSalesOrder);
  *           schema:
  *             type: object
  *             required:
- *               - customer_id
- *               - status_id
+ *               - customerId
+ *               - statusId
  *               - items
  *             properties:
- *               customer_id:
+ *               customerId:
  *                 type: integer
  *                 example: 2
- *               status_id:
+ *               statusId:
  *                 type: integer
  *                 example: 2
  *               notes:
  *                 type: string
  *                 example: "Cliente solicita cambio de horario de entrega"
- *               sales_order_date:
+ *               salesOrderDate:
  *                 type: string
  *                 format: date-time
  *                 example: "2023-06-15T10:00:00Z"
@@ -169,17 +169,17 @@ router.get('/:id', getSalesOrder);
  *                 items:
  *                   type: object
  *                   required:
- *                     - product_id
+ *                     - productId
  *                     - quantity
- *                     - unit_price
+ *                     - unitPrice
  *                   properties:
- *                     product_id:
+ *                     productId:
  *                       type: integer
  *                       example: 1
  *                     quantity:
  *                       type: integer
  *                       example: 5
- *                     unit_price:
+ *                     unitPrice:
  *                       type: number
  *                       format: decimal
  *                       example: 200.00
