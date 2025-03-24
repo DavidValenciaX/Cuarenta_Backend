@@ -42,9 +42,6 @@ async function createSalesOrder(req, res) {
         totalAmount += product.quantity * product.unit_price;
       }
 
-      // Apply tax if needed
-      totalAmount = totalAmount * 1.19; // Assuming 19% tax rate
-
       // Create the sales order with its products
       const salesOrder = await SalesOrder.create({
         userId,
@@ -173,7 +170,7 @@ async function updateSalesOrder(req, res) {
       }
 
       // Calculate new totalAmount directly from items
-      totalAmount = items.reduce((sum, item) => sum + (item.quantity * item.unit_price), 0) * 1.19;
+      totalAmount = items.reduce((sum, item) => sum + (item.quantity * item.unit_price), 0);
     }
 
     // Format items for database
