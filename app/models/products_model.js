@@ -3,57 +3,56 @@ const pool = require('../config/data_base');
 class Product {
   
   static async create(data) {
-    const { user_id, name, description, unit_price, unit_cost, image_url, category_id, unit_of_measure_id, quantity, barcode } = data;
+    const { userId, name, description, unitPrice, unitCost, imageUrl, categoryId, unitOfMeasureId, quantity, barcode } = data;
     const { rows } = await pool.query(
       `INSERT INTO public.products(
          user_id, name, description, unit_price, unit_cost,
          image_url, category_id, unit_of_measure_id,
          quantity, barcode
        ) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING *`,
-      [user_id, name, description, unit_price, unit_cost, image_url, category_id, unit_of_measure_id, quantity, barcode]
+      [userId, name, description, unitPrice, unitCost, imageUrl, categoryId, unitOfMeasureId, quantity, barcode]
     );
     return rows[0];
   }
   
-
-  static async findAllByUser(user_id) {
+  static async findAllByUser(userId) {
     const { rows } = await pool.query(
       `SELECT * FROM public.products WHERE user_id = $1 ORDER BY name`,
-      [user_id]
+      [userId]
     );
     return rows;
   }
 
-  static async findById(id, user_id) {
+  static async findById(id, userId) {
     const { rows } = await pool.query(
       `SELECT * FROM public.products WHERE id = $1 AND user_id = $2`,
-      [id, user_id]
+      [id, userId]
     );
     return rows[0];
   }
 
-  static async findByNameAndUser(name, user_id) {
+  static async findByNameAndUser(name, userId) {
     const { rows } = await pool.query(
       `SELECT * FROM public.products WHERE name = $1 AND user_id = $2`,
-      [name, user_id]
+      [name, userId]
     );
     return rows[0];
   }
 
-  static async findByBarcodeAndUser(barcode, user_id) {
+  static async findByBarcodeAndUser(barcode, userId) {
     const { rows } = await pool.query(
       `SELECT * FROM public.products WHERE barcode = $1 AND user_id = $2`,
-      [barcode, user_id]
+      [barcode, userId]
     );
     return rows[0];
   }
 
-  static async update(id, data, user_id) {
+  static async update(id, data, userId) {
     const values = [
-      data.name, data.description, data.unit_price, data.unit_cost,
-      data.image_url, data.category_id,
-      data.unit_of_measure_id, data.quantity, data.barcode,
-      id, user_id
+      data.name, data.description, data.unitPrice, data.unitCost,
+      data.imageUrl, data.categoryId,
+      data.unitOfMeasureId, data.quantity, data.barcode,
+      id, userId
     ];
     const { rows } = await pool.query(
       `UPDATE public.products
@@ -66,20 +65,20 @@ class Product {
     return rows[0];
   }
 
-  static async delete(id, user_id) {
+  static async delete(id, userId) {
     const { rows } = await pool.query(
       `DELETE FROM public.products WHERE id=$1 AND user_id=$2 RETURNING *`,
-      [id, user_id]
+      [id, userId]
     );
     return rows[0];
   }
 
   // Check if product has sufficient stock
-  static async hasSufficientStock(productId, requiredQuantity, user_id) {
+  static async hasSufficientStock(productId, requiredQuantity, userId) {
     const { rows } = await pool.query(
       `SELECT quantity FROM public.products
        WHERE id = $1 AND user_id = $2`,
-      [productId, user_id]
+      [productId, userId]
     );
     
     if (rows.length === 0) return false;

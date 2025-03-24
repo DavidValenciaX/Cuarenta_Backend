@@ -28,10 +28,10 @@ router.use(verificarToken);
  *             type: object
  *             required:
  *               - name
- *               - unit_price
- *               - unit_cost
- *               - category_id
- *               - unit_of_measure_id
+ *               - unitPrice
+ *               - unitCost
+ *               - categoryId
+ *               - unitOfMeasureId
  *             properties:
  *               name:
  *                 type: string
@@ -39,19 +39,19 @@ router.use(verificarToken);
  *               description:
  *                 type: string
  *                 example: "Descripción del producto X"
- *               unit_price:
+ *               unitPrice:
  *                 type: number
  *                 example: 100.50
- *               unit_cost:
+ *               unitCost:
  *                 type: number
  *                 example: 80.00
- *               image_url:
+ *               imageUrl:
  *                 type: string
  *                 example: "http://ejemplo.com/imagen.jpg"
- *               category_id:
+ *               categoryId:
  *                 type: integer
  *                 example: 2
- *               unit_of_measure_id:
+ *               unitOfMeasureId:
  *                 type: integer
  *                 example: 1
  *               quantity:
@@ -141,19 +141,19 @@ router.get('/:id', getProduct);
  *               description:
  *                 type: string
  *                 example: "Nueva descripción"
- *               unit_price:
+ *               unitPrice:
  *                 type: number
  *                 example: 110.00
- *               unit_cost:
+ *               unitCost:
  *                 type: number
  *                 example: 90.00
- *               image_url:
+ *               imageUrl:
  *                 type: string
  *                 example: "http://ejemplo.com/nueva_imagen.jpg"
- *               category_id:
+ *               categoryId:
  *                 type: integer
  *                 example: 2
- *               unit_of_measure_id:
+ *               unitOfMeasureId:
  *                 type: integer
  *                 example: 1
  *               quantity:

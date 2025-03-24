@@ -10,26 +10,26 @@ function normalizeName(name) {
 async function createProduct(req, res) {
   let {
     name, description,
-    unit_price, unit_cost,
-    image_url,
-    category_id, unit_of_measure_id,
+    unitPrice, unitCost,
+    imageUrl,
+    categoryId, unitOfMeasureId,
     quantity, barcode
   } = req.body;
-  const user_id = req.usuario.userId;
+  const userId = req.usuario.userId;
 
   // Campos requeridos
-  if (!name || unit_price == null || unit_cost == null || !category_id || !unit_of_measure_id) {
+  if (!name || unitPrice == null || unitCost == null || !categoryId || !unitOfMeasureId) {
     return sendResponse(res, 400, 'error', 'Faltan campos requeridos');
   }
 
   // Convertir y validar numéricos
-  unit_price = Number(unit_price);
-  unit_cost = Number(unit_cost);
-  category_id = Number(category_id);
-  unit_of_measure_id = Number(unit_of_measure_id);
+  unitPrice = Number(unitPrice);
+  unitCost = Number(unitCost);
+  categoryId = Number(categoryId);
+  unitOfMeasureId = Number(unitOfMeasureId);
   quantity = quantity == null ? 0 : Number(quantity);
 
-  if ([unit_price, unit_cost, category_id, unit_of_measure_id, quantity]
+  if ([unitPrice, unitCost, categoryId, unitOfMeasureId, quantity]
       .some(v => isNaN(v))) {
     return sendResponse(res, 400, 'error', 'Los campos numéricos deben ser válidos');
   }
@@ -41,24 +41,24 @@ async function createProduct(req, res) {
   if (barcode === '') barcode = null;
   
   // Unicidad nombre
-  if (await Product.findByNameAndUser(name, user_id)) {
+  if (await Product.findByNameAndUser(name, userId)) {
     return sendResponse(res, 409, 'error', 'Ya existe un producto con ese nombre');
   }
 
   // Unicidad barcode
-  if (barcode && await Product.findByBarcodeAndUser(barcode, user_id)) {
+  if (barcode && await Product.findByBarcodeAndUser(barcode, userId)) {
     return sendResponse(res, 409, 'error', 'Código de barras ya registrado');
   }
 
   // Verificar relaciones pertenecen al usuario
-  if (!await Category.findById(category_id, user_id)) {
+  if (!await Category.findById(categoryId, userId)) {
     return sendResponse(res, 404, 'error', 'Categoría no encontrada');
   }
 
   const product = await Product.create({
-    name, description, unit_price, unit_cost,
-    image_url, category_id,
-    unit_of_measure_id, quantity, barcode, user_id
+    name, description, unitPrice, unitCost,
+    imageUrl, categoryId,
+    unitOfMeasureId, quantity, barcode, userId
   });
   return sendResponse(res, 201, 'success', 'Producto creado', product);
 }
@@ -67,24 +67,24 @@ async function updateProduct(req, res) {
   const id = Number(req.params.id);
   let {
     name, description,
-    unit_price, unit_cost,
-    image_url,
-    category_id, unit_of_measure_id,
+    unitPrice, unitCost,
+    imageUrl,
+    categoryId, unitOfMeasureId,
     quantity, barcode
   } = req.body;
-  const user_id = req.usuario.userId;
+  const userId = req.usuario.userId;
 
-  if (!name || unit_price == null || unit_cost == null || !category_id || !unit_of_measure_id) {
+  if (!name || unitPrice == null || unitCost == null || !categoryId || !unitOfMeasureId) {
     return sendResponse(res, 400, 'error', 'Faltan campos requeridos');
   }
 
-  unit_price = Number(unit_price);
-  unit_cost = Number(unit_cost);
-  category_id = Number(category_id);
-  unit_of_measure_id = Number(unit_of_measure_id);
+  unitPrice = Number(unitPrice);
+  unitCost = Number(unitCost);
+  categoryId = Number(categoryId);
+  unitOfMeasureId = Number(unitOfMeasureId);
   quantity = quantity == null ? 0 : Number(quantity);
 
-  if ([unit_price, unit_cost, category_id, unit_of_measure_id, quantity]
+  if ([unitPrice, unitCost, categoryId, unitOfMeasureId, quantity]
       .some(v => isNaN(v))) {
     return sendResponse(res, 400, 'error', 'Los campos numéricos deben ser válidos');
   }
@@ -94,25 +94,25 @@ async function updateProduct(req, res) {
   barcode = typeof barcode === 'string' ? barcode.trim() : String(barcode || '').trim();
   if (barcode === '') barcode = null;
 
-  const existingByName = await Product.findByNameAndUser(name, user_id);
+  const existingByName = await Product.findByNameAndUser(name, userId);
   if (existingByName && existingByName.id !== id) {
     return sendResponse(res, 409, 'error', 'Ya existe un producto con ese nombre');
   }
 
-  const existingByBarcode = barcode && await Product.findByBarcodeAndUser(barcode, user_id);
+  const existingByBarcode = barcode && await Product.findByBarcodeAndUser(barcode, userId);
   if (existingByBarcode && existingByBarcode.id !== id) {
     return sendResponse(res, 409, 'error', 'Código de barras ya registrado');
   }
 
-  if (!await Category.findById(category_id, user_id)) {
+  if (!await Category.findById(categoryId, userId)) {
     return sendResponse(res, 404, 'error', 'Categoría no encontrada');
   }
 
   const updated = await Product.update(id, {
-    name, description, unit_price, unit_cost,
-    image_url, category_id,
-    unit_of_measure_id, quantity, barcode
-  }, user_id);
+    name, description, unitPrice, unitCost,
+    imageUrl, categoryId,
+    unitOfMeasureId, quantity, barcode
+  }, userId);
 
   if (!updated) return sendResponse(res, 404, 'error', 'Producto no encontrado');
   return sendResponse(res, 200, 'success', 'Producto actualizado', updated);
