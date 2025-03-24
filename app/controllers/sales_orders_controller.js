@@ -24,18 +24,18 @@ async function createSalesOrder(req, res) {
       let totalAmount = 0;
       for (const product of items) {
         if (!product.product_id || !product.quantity || !product.unit_price) {
-          throw new Error('Cada producto debe tener ID, cantidad y precio unitario');
+          return sendResponse(res, 400, 'error', 'Cada producto debe tener ID, cantidad y precio unitario');
         }
         
         const productExists = await Product.findById(product.product_id, userId);
         if (!productExists) {
-          throw new Error(`Producto con ID ${product.product_id} no encontrado o no pertenece al usuario`);
+          return sendResponse(res, 404, 'error', `Producto con ID ${product.product_id} no encontrado o no pertenece al usuario`);
         }
         
         // Check if product has sufficient stock
         const hasSufficientStock = await Product.hasSufficientStock(product.product_id, product.quantity, userId);
         if (!hasSufficientStock) {
-          throw new Error(`Producto con ID ${product.product_id} no tiene suficiente stock disponible`);
+          return sendResponse(res, 400, 'error', `Producto con ID ${product.product_id} no tiene suficiente stock disponible`);
         }
 
         // Add to total amount
