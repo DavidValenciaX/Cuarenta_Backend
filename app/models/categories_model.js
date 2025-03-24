@@ -1,7 +1,7 @@
 const pool = require('../config/data_base');
 
 class Category {
-  static async create({ name, user_id }) {
+  static async create(name, user_id) {
     const result = await pool.query(
       `INSERT INTO public.categories(name, user_id) VALUES($1, $2) RETURNING *`,
       [name, user_id]
@@ -25,7 +25,7 @@ class Category {
     return result.rows[0];
   }
 
-  static async update(id, { name }, user_id) {
+  static async update(id, name, user_id) {
     const result = await pool.query(
       `UPDATE public.categories SET name = $1 WHERE id = $2 AND user_id = $3 RETURNING *`,
       [name, id, user_id]

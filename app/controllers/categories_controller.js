@@ -16,7 +16,7 @@ async function createCategory(req, res) {
   const exists = await Category.findByNameAndUser(name, user_id);
   if (exists) return sendResponse(res, 409, 'error', 'Ya existe una categoría con ese nombre');
 
-  const category = await Category.create({ name, user_id });
+  const category = await Category.create(name, user_id);
   return sendResponse(res, 201, 'success', 'Categoría creada', category);
 }
 
@@ -47,7 +47,7 @@ async function updateCategory(req, res) {
       return sendResponse(res, 409, 'error', 'Ya existe una categoría con ese nombre');
     }
   
-    const updated = await Category.update(id, { name }, user_id);
+    const updated = await Category.update(id, name, user_id);
     if (!updated) return sendResponse(res, 404, 'error', 'Categoría no encontrada');
     return sendResponse(res, 200, 'success', 'Categoría actualizada', updated);
   }
