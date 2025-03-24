@@ -18,10 +18,8 @@ class SalesOrder {
   }
 
   // Create a sales order with its products
-  static async create({ userId, customer_id, status_id, totalAmount, notes, items, order_date, client }) {
-    // If client is provided, use it (part of an existing transaction)
-    // Otherwise create a new transaction
-    if (client) {
+  static async create({ userId, customer_id, status_id, totalAmount, notes, items, order_date }) {
+    return this.executeWithTransaction(async (client) => {
       // Insert the sales order
       const orderResult = await client.query(
         `INSERT INTO public.sales_orders(user_id, customer_id, status_id, total_amount, notes, order_date)
@@ -43,13 +41,7 @@ class SalesOrder {
       }
       
       return salesOrder;
-    } else {
-      // Execute within a new transaction
-      return this.executeWithTransaction(async (client) => {
-        const orderData = { userId, customer_id, status_id, totalAmount, notes, items, order_date, client };
-        return await this.create(orderData);
-      });
-    }
+    });
   }
 
   // Find all sales orders for a user
@@ -93,8 +85,8 @@ class SalesOrder {
   }
 
   // Update a sales order
-  static async update(id, { customer_id, status_id, order_date, totalAmount, notes, items }, userId, client = null) {
-    if (client) {
+  static async update(id, { customer_id, status_id, order_date, totalAmount, notes, items }, userId) {
+    return this.executeWithTransaction(async (client) => {
       // Build the update query based on whether order_date is provided
       let updateQuery = `
         UPDATE public.sales_orders
@@ -141,12 +133,7 @@ class SalesOrder {
       }
       
       return salesOrder;
-    } else {
-      // Execute within a new transaction
-      return this.executeWithTransaction(async (client) => {
-        return await this.update(id, { customer_id, status_id, order_date, totalAmount, notes, items }, userId, client);
-      });
-    }
+    });
   }
 
   // Delete a sales order and its products (leveraging CASCADE)
@@ -161,8 +148,8 @@ class SalesOrder {
   }
 
   // Validate customer and check if it belongs to user
-  static async validateCustomer(customer_id, userId, client) {
-    const { rows } = await client.query(
+  static async validateCustomer(customer_id, userId) {
+    const { rows } = await pool.query(
       `SELECT * FROM public.customers WHERE id = $1 AND user_id = $2`,
       [customer_id, userId]
     );
@@ -170,8 +157,8 @@ class SalesOrder {
   }
 
   // Validate sales order exists and belongs to user
-  static async validateSalesOrder(orderId, userId, client) {
-    const { rows } = await client.query(
+  static async validateSalesOrder(orderId, userId) {
+    const { rows } = await pool.query(
       `SELECT * FROM public.sales_orders WHERE id = $1 AND user_id = $2`,
       [orderId, userId]
     );

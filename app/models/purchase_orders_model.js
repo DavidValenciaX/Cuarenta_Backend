@@ -18,10 +18,9 @@ class PurchaseOrder {
   }
 
   // Create a purchase order with its products
-  static async create({ userId, supplier_id, status_id, total_amount, purchase_order_date, notes, items, client }) {
-    // If client is provided, use it (part of an existing transaction)
-    // Otherwise create a new transaction
-    if (client) {
+  static async create({ userId, supplier_id, status_id, total_amount, purchase_order_date, notes, items }) {
+    // Execute within a transaction
+    return this.executeWithTransaction(async (client) => {
       // Insert the purchase order
       const purchaseOrderResult = await client.query(
         `INSERT INTO public.purchase_orders(user_id, supplier_id, status_id, total_amount, purchase_order_date, notes)
@@ -79,13 +78,7 @@ class PurchaseOrder {
       }
       
       return purchaseOrder;
-    } else {
-      // Execute within a new transaction
-      return this.executeWithTransaction(async (client) => {
-        const orderData = { userId, supplier_id, status_id, total_amount, purchase_order_date, notes, items, client };
-        return await this.create(orderData);
-      });
-    }
+    });
   }
 
   // Find all purchase orders for a user
@@ -129,10 +122,10 @@ class PurchaseOrder {
   }
 
   // Update a purchase order
-  static async update(id, { supplier_id, status_id, purchase_order_date, total_amount, notes, items }, userId, client = null) {
-    if (client) {
+  static async update(id, { supplier_id, status_id, purchase_order_date, total_amount, notes, items }, userId) {
+    return this.executeWithTransaction(async (client) => {
       // Verify the purchase order exists and belongs to user
-      const existingPurchaseOrder = await this.validatePurchaseOrder(id, userId, client);
+      const existingPurchaseOrder = await this.validatePurchaseOrder(id, userId);
       if (!existingPurchaseOrder) {
         return null;
       }
@@ -202,12 +195,7 @@ class PurchaseOrder {
       }
       
       return purchaseOrder;
-    } else {
-      // Execute within a new transaction
-      return this.executeWithTransaction(async (client) => {
-        return await this.update(id, { supplier_id, status_id, purchase_order_date, total_amount, notes, items }, userId, client);
-      });
-    }
+    });
   }
 
   // Delete a purchase order and update inventory
@@ -238,8 +226,8 @@ class PurchaseOrder {
   }
 
   // Validate supplier and check if it belongs to user
-  static async validateSupplier(supplier_id, userId, client) {
-    const { rows } = await client.query(
+  static async validateSupplier(supplier_id, userId) {
+    const { rows } = await pool.query(
       `SELECT * FROM public.suppliers WHERE id = $1 AND user_id = $2`,
       [supplier_id, userId]
     );
@@ -247,8 +235,8 @@ class PurchaseOrder {
   }
 
   // Validate purchase order exists and belongs to user
-  static async validatePurchaseOrder(orderId, userId, client) {
-    const { rows } = await client.query(
+  static async validatePurchaseOrder(orderId, userId) {
+    const { rows } = await pool.query(
       `SELECT * FROM public.purchase_orders WHERE id = $1 AND user_id = $2`,
       [orderId, userId]
     );
