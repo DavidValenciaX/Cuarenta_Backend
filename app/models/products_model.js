@@ -74,32 +74,6 @@ class Product {
     return rows[0];
   }
 
-  // Update product stock quantity
-  static async updateStock(productId, quantityChange, user_id, client = null) {
-    // If no client is provided, use the pool directly (and manage our own connection)
-    const shouldReleaseClient = !client;
-    const dbClient = client || await pool.connect();
-    
-    try {
-      const result = await dbClient.query(
-        `UPDATE public.products 
-         SET quantity = quantity + $1, updated_at = NOW()
-         WHERE id = $2 AND user_id = $3
-         RETURNING *`,
-        [quantityChange, productId, user_id]
-      );
-      
-      return result.rows[0];
-    } catch (error) {
-      throw error;
-    } finally {
-      // Only release the client if we created it in this method
-      if (shouldReleaseClient && dbClient) {
-        dbClient.release();
-      }
-    }
-  }
-
   // Check if product has sufficient stock
   static async hasSufficientStock(productId, requiredQuantity, user_id) {
     const { rows } = await pool.query(
