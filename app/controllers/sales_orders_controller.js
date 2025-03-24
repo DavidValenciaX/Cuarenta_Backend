@@ -27,7 +27,7 @@ async function createSalesOrder(req, res) {
     }
 
     // Calculate total amount directly and validate products
-    let totalAmount = 0;
+    let total_amount = 0;
     const validatedItems = [];
     
     for (const item of items) {
@@ -49,7 +49,7 @@ async function createSalesOrder(req, res) {
         return sendResponse(res, 400, 'error', `Producto con ID ${item.product_id} no tiene suficiente stock disponible`);
       }
       
-      totalAmount += qty * price;
+      total_amount += qty * price;
       validatedItems.push({
         product_id: item.product_id,
         quantity: qty,
@@ -62,7 +62,7 @@ async function createSalesOrder(req, res) {
       userId,
       customer_id,
       status_id,
-      totalAmount,
+      total_amount,
       sales_order_date,
       notes,
       items: validatedItems
@@ -150,8 +150,8 @@ async function updateSalesOrder(req, res) {
       };
     });
 
-    // Calculate totalAmount and validate products
-    let totalAmount = 0;
+    // Calculate total_amount and validate products
+    let total_amount = 0;
     const validatedItems = [];
     
     for (const item of items) {
@@ -179,7 +179,7 @@ async function updateSalesOrder(req, res) {
         }
       }
       
-      totalAmount += qty * price;
+      total_amount += qty * price;
       validatedItems.push({
         product_id: item.product_id,
         quantity: qty,
@@ -192,7 +192,7 @@ async function updateSalesOrder(req, res) {
       customer_id,
       status_id,
       sales_order_date,
-      totalAmount,
+      total_amount,
       notes,
       items: validatedItems
     }, userId);

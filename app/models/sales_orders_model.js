@@ -18,7 +18,7 @@ class SalesOrder {
   }
 
   // Create a sales order with its products
-  static async create({ userId, customer_id, status_id, totalAmount, sales_order_date, notes, items }) {
+  static async create({ userId, customer_id, status_id, total_amount, sales_order_date, notes, items }) {
     // Execute within a transaction
     return this.executeWithTransaction(async (client) => {
       // Insert the sales order
@@ -26,7 +26,7 @@ class SalesOrder {
         `INSERT INTO public.sales_orders(user_id, customer_id, status_id, total_amount, sales_order_date, notes)
          VALUES ($1, $2, $3, $4, COALESCE($5, NOW()), $6)
          RETURNING *`,
-        [userId, customer_id, status_id, totalAmount, sales_order_date, notes]
+        [userId, customer_id, status_id, total_amount, sales_order_date, notes]
       );
       
       const salesOrder = salesOrderResult.rows[0];
@@ -100,7 +100,7 @@ class SalesOrder {
   }
 
   // Update a sales order
-  static async update(id, { customer_id, status_id, sales_order_date, totalAmount, notes, items }, userId) {
+  static async update(id, { customer_id, status_id, sales_order_date, total_amount, notes, items }, userId) {
     return this.executeWithTransaction(async (client) => {
       // Verify the sales order exists and belongs to user
       const existingSalesOrder = await this.findById(id, userId);
@@ -134,7 +134,7 @@ class SalesOrder {
         SET customer_id = $1, status_id = $2, total_amount = $3, notes = $4, updated_at = NOW()
       `;
       
-      const queryParams = [customer_id, status_id, totalAmount, notes];
+      const queryParams = [customer_id, status_id, total_amount, notes];
       let paramIndex = 5;
       
       // Add sales_order_date to the query if provided

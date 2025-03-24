@@ -27,7 +27,7 @@ async function createPurchaseOrder(req, res) {
     }
 
     // Calculate total amount directly and validate products
-    let totalAmount = 0;
+    let total_amount = 0;
     const validatedItems = [];
     
     for (const item of items) {
@@ -43,7 +43,7 @@ async function createPurchaseOrder(req, res) {
         return sendResponse(res, 404, 'error', `Producto con ID ${item.product_id} no encontrado o no pertenece al usuario`);
       }
       
-      totalAmount += qty * price;
+      total_amount += qty * price;
       validatedItems.push({
         product_id: item.product_id,
         quantity: qty,
@@ -56,7 +56,7 @@ async function createPurchaseOrder(req, res) {
       userId,
       supplier_id,
       status_id,
-      total_amount: totalAmount,
+      total_amount,
       purchase_order_date,
       notes,
       items: validatedItems
@@ -133,7 +133,7 @@ async function updatePurchaseOrder(req, res) {
     }
 
     // Calculate total_amount and validate products
-    let totalAmount = 0;
+    let total_amount = 0;
     const validatedItems = [];
     
     for (const item of items) {
@@ -149,7 +149,7 @@ async function updatePurchaseOrder(req, res) {
         return sendResponse(res, 404, 'error', `Producto con ID ${item.product_id} no encontrado o no pertenece al usuario`);
       }
       
-      totalAmount += qty * price;
+      total_amount += qty * price;
       validatedItems.push({
         product_id: item.product_id,
         quantity: qty,
@@ -162,7 +162,7 @@ async function updatePurchaseOrder(req, res) {
       supplier_id,
       status_id,
       purchase_order_date,
-      total_amount: totalAmount,
+      total_amount,
       notes,
       items: validatedItems
     }, userId);
