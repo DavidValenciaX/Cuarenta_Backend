@@ -22,14 +22,14 @@ class SalesOrder {
     // Execute within a transaction
     return this.executeWithTransaction(async (client) => {
       // Insert the sales order
-      const orderResult = await client.query(
+      const salesOrderResult = await client.query(
         `INSERT INTO public.sales_orders(user_id, customer_id, status_id, total_amount, order_date, notes)
          VALUES ($1, $2, $3, $4, COALESCE($5, NOW()), $6)
          RETURNING *`,
         [userId, customer_id, status_id, totalAmount, order_date, notes]
       );
       
-      const salesOrder = orderResult.rows[0];
+      const salesOrder = salesOrderResult.rows[0];
       
       // Insert all the sales order products
       if (items && items.length > 0) {
@@ -103,8 +103,8 @@ class SalesOrder {
   static async update(id, { customer_id, status_id, order_date, totalAmount, notes, items }, userId) {
     return this.executeWithTransaction(async (client) => {
       // Verify the sales order exists and belongs to user
-      const existingOrder = await this.findById(id, userId);
-      if (!existingOrder) {
+      const existingSalesOrder = await this.findById(id, userId);
+      if (!existingSalesOrder) {
         return null;
       }
 
@@ -147,13 +147,13 @@ class SalesOrder {
       updateQuery += ` WHERE id = $${paramIndex} AND user_id = $${paramIndex + 1} RETURNING *`;
       queryParams.push(id, userId);
       
-      const orderResult = await client.query(updateQuery, queryParams);
+      const salesOrderResult = await client.query(updateQuery, queryParams);
       
-      if (orderResult.rows.length === 0) {
+      if (salesOrderResult.rows.length === 0) {
         return null;
       }
       
-      const salesOrder = orderResult.rows[0];
+      const salesOrder = salesOrderResult.rows[0];
       
       // If items are provided, add new items and update inventory
       if (items && items.length > 0) {

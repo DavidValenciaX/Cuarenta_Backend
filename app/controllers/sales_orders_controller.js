@@ -90,16 +90,16 @@ async function listSalesOrders(req, res) {
 // Get a specific sales order with its products
 async function getSalesOrder(req, res) {
   try {
-    const orderId = req.params.id;
+    const salesOrderId = req.params.id;
     const userId = req.usuario.userId;
 
-    const salesOrder = await SalesOrder.findById(orderId, userId);
+    const salesOrder = await SalesOrder.findById(salesOrderId, userId);
     if (!salesOrder) {
       return sendResponse(res, 404, 'error', 'Orden de venta no encontrada');
     }
 
     // Get the products for this sales order
-    const products = await SalesOrder.getProducts(orderId, userId);
+    const products = await SalesOrder.getProducts(salesOrderId, userId);
     
     // Combine order and products data
     const result = {
@@ -118,7 +118,7 @@ async function getSalesOrder(req, res) {
 async function updateSalesOrder(req, res) {
   try {
     const userId = req.usuario.userId;
-    const orderId = req.params.id;
+    const salesOrderId = req.params.id;
     const { customer_id, status_id, order_date, notes, items } = req.body;
 
     // Validate required fields
@@ -133,13 +133,13 @@ async function updateSalesOrder(req, res) {
     }
 
     // Validate the order exists
-    const existingOrder = await SalesOrder.findById(orderId, userId);
-    if (!existingOrder) {
+    const existingSalesOrder = await SalesOrder.findById(salesOrderId, userId);
+    if (!existingSalesOrder) {
       return sendResponse(res, 404, 'error', 'Orden de venta no encontrada');
     }
 
     // Get existing products for this order to calculate inventory changes
-    const existingProducts = await SalesOrder.getProducts(orderId, userId);
+    const existingProducts = await SalesOrder.getProducts(salesOrderId, userId);
     
     // Create a map of existing products for easier comparison
     const existingProductsMap = {};
@@ -188,7 +188,7 @@ async function updateSalesOrder(req, res) {
     }
 
     // Update the sales order
-    const updated = await SalesOrder.update(orderId, {
+    const updated = await SalesOrder.update(salesOrderId, {
       customer_id,
       status_id,
       order_date,
@@ -212,9 +212,9 @@ async function updateSalesOrder(req, res) {
 async function deleteSalesOrder(req, res) {
   try {
     const userId = req.usuario.userId;
-    const orderId = req.params.id;
+    const salesOrderId = req.params.id;
 
-    const deleted = await SalesOrder.delete(orderId, userId);
+    const deleted = await SalesOrder.delete(salesOrderId, userId);
     if (!deleted) {
       return sendResponse(res, 404, 'error', 'Orden de venta no encontrada');
     }
