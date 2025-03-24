@@ -17,13 +17,13 @@ async function createPurchaseOrder(req, res) {
   
     // Validate required fields
     if (!supplier_id || status_id == null || !Array.isArray(items) || items.length === 0) {
-      return sendResponse(res, 400, 'error', 'supplier_id, status_id e items son requeridos');
+      return sendResponse(res, 400, 'error', 'Proveedor, estado y al menos un producto son requeridos');
     }
   
     // Validate supplier
     const supplier = await Supplier.findById(supplier_id, userId);
     if (!supplier) {
-      return sendResponse(res, 404, 'error', 'Proveedor inválido');
+      return sendResponse(res, 404, 'error', 'Proveedor no encontrado o no pertenece al usuario');
     }
 
     // Calculate total amount directly and validate products
@@ -40,7 +40,7 @@ async function createPurchaseOrder(req, res) {
       
       const product = await Product.findById(item.product_id, userId);
       if (!product) {
-        return sendResponse(res, 404, 'error', `Producto ${item.product_id} inválido`);
+        return sendResponse(res, 404, 'error', `Producto con ID ${item.product_id} no encontrado o no pertenece al usuario`);
       }
       
       total_amount += qty * price;

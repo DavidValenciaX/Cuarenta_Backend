@@ -18,57 +18,40 @@ class SalesOrder {
   }
 
   // Create a sales order with its products
-  static async create({ userId, customer_id, status_id, totalAmount, notes, items, order_date }) {
+  static async create({ userId, customer_id, status_id, totalAmount, order_date, notes, items }) {
+    // Execute within a transaction
     return this.executeWithTransaction(async (client) => {
-      // Validate product stock before creating the order
-      for (const item of items) {
-        // Check if product exists and belongs to user
-        const { rows: productRows } = await client.query(
-          `SELECT * FROM public.products WHERE id = $1 AND user_id = $2`,
-          [item.product_id, userId]
-        );
-        
-        if (productRows.length === 0) {
-          throw new Error(`Producto con ID ${item.product_id} no encontrado o no pertenece al usuario`);
-        }
-        
-        // Check if product has sufficient stock
-        const { rows: stockRows } = await client.query(
-          `SELECT quantity FROM public.products WHERE id = $1 AND user_id = $2 AND quantity >= $3`,
-          [item.product_id, userId, item.quantity]
-        );
-        
-        if (stockRows.length === 0) {
-          throw new Error(`Producto con ID ${item.product_id} no tiene suficiente stock disponible`);
-        }
-      }
-      
       // Insert the sales order
       const orderResult = await client.query(
-        `INSERT INTO public.sales_orders(user_id, customer_id, status_id, total_amount, notes, order_date)
-         VALUES($1, $2, $3, $4, $5, COALESCE($6, NOW())) RETURNING *`,
-        [userId, customer_id, status_id, totalAmount, notes, order_date]
+        `INSERT INTO public.sales_orders(user_id, customer_id, status_id, total_amount, order_date, notes)
+         VALUES ($1, $2, $3, $4, COALESCE($5, NOW()), $6)
+         RETURNING *`,
+        [userId, customer_id, status_id, totalAmount, order_date, notes]
       );
       
       const salesOrder = orderResult.rows[0];
       
-      // Insert all the sales order products and update inventory
+      // Insert all the sales order products
       if (items && items.length > 0) {
         for (const item of items) {
-          // Add item to sales order
           await client.query(
             `INSERT INTO public.sales_order_products(sales_order_id, product_id, quantity, unit_price)
-             VALUES($1, $2, $3, $4)`,
+             VALUES ($1, $2, $3, $4)`,
             [salesOrder.id, item.product_id, item.quantity, item.unit_price]
           );
           
           // Update product inventory (decrease stock)
-          await client.query(
+          const result = await client.query(
             `UPDATE public.products
              SET quantity = quantity - $1
-             WHERE id = $2 AND user_id = $3`,
+             WHERE id = $2 AND user_id = $3
+             RETURNING quantity`,
             [item.quantity, item.product_id, userId]
           );
+          
+          if (!result.rows.length) {
+            throw new Error(`No se pudo actualizar inventario para producto ${item.product_id}`);
+          }
         }
       }
       

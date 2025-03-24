@@ -22,35 +22,35 @@ class PurchaseOrder {
     // Execute within a transaction
     return this.executeWithTransaction(async (client) => {
       // Insert the purchase order
-      const purchaseOrderResult = await client.query(
+      const orderResult = await client.query(
         `INSERT INTO public.purchase_orders(user_id, supplier_id, status_id, total_amount, purchase_order_date, notes)
          VALUES ($1, $2, $3, $4, COALESCE($5, NOW()), $6)
          RETURNING *`,
         [userId, supplier_id, status_id, total_amount, purchase_order_date, notes]
       );
       
-      const purchaseOrder = purchaseOrderResult.rows[0];
+      const purchaseOrder = orderResult.rows[0];
       
       // Insert all the purchase order products
       if (items && items.length > 0) {
-        for (const product of items) {
+        for (const item of items) {
           await client.query(
             `INSERT INTO public.purchase_order_products(purchase_order_id, product_id, quantity, unit_price)
              VALUES ($1, $2, $3, $4)`,
-            [purchaseOrder.id, product.product_id, product.quantity, product.unit_price]
+            [purchaseOrder.id, item.product_id, item.quantity, item.unit_price]
           );
           
           // Update product quantity in inventory
           const result = await client.query(
             `UPDATE public.products
-               SET quantity = quantity + $1
+             SET quantity = quantity + $1
              WHERE id = $2 AND user_id = $3
              RETURNING unit_price`,
-            [product.quantity, product.product_id, userId]
+            [item.quantity, item.product_id, userId]
           );
           
           if (!result.rows.length) {
-            throw new Error(`No se pudo actualizar inventario para producto ${product.product_id}`);
+            throw new Error(`No se pudo actualizar inventario para producto ${item.product_id}`);
           }
           
           const currentUnitPrice = result.rows[0].unit_price;
@@ -63,15 +63,15 @@ class PurchaseOrder {
              WHERE pop.product_id = $1 AND po.user_id = $2
              ORDER BY po.purchase_order_date DESC
              LIMIT 1`,
-            [product.product_id, userId]
+            [item.product_id, userId]
           );
           
-          if (latest?.id === purchaseOrder.id && product.unit_price > currentUnitPrice) {
+          if (latest?.id === purchaseOrder.id && item.unit_price > currentUnitPrice) {
             await client.query(
               `UPDATE public.products
                SET unit_price = $1
                WHERE id = $2 AND user_id = $3`,
-              [product.unit_price, product.product_id, userId]
+              [item.unit_price, item.product_id, userId]
             );
           }
         }
