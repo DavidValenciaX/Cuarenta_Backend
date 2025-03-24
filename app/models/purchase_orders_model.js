@@ -125,7 +125,7 @@ class PurchaseOrder {
   static async update(id, { supplier_id, status_id, purchase_order_date, total_amount, notes, items }, userId) {
     return this.executeWithTransaction(async (client) => {
       // Verify the purchase order exists and belongs to user
-      const existingPurchaseOrder = await this.validatePurchaseOrder(id, userId);
+      const existingPurchaseOrder = await this.findById(id, userId);
       if (!existingPurchaseOrder) {
         return null;
       }
@@ -136,7 +136,7 @@ class PurchaseOrder {
         [id]
       );
       
-      // Revert inventory for old items
+      // Revert inventory for old items (decrease from inventory)
       for (const item of oldItems) {
         await client.query(
           `UPDATE public.products SET quantity = quantity - $1 WHERE id = $2 AND user_id = $3`,
@@ -186,7 +186,7 @@ class PurchaseOrder {
             [id, item.product_id, item.quantity, item.unit_price]
           );
           
-          // Update product quantity
+          // Update product quantity (increase stock)
           await client.query(
             `UPDATE public.products SET quantity = quantity + $1 WHERE id = $2 AND user_id = $3`,
             [item.quantity, item.product_id, userId]

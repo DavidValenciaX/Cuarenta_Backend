@@ -122,14 +122,14 @@ async function updateSalesOrder(req, res) {
     const { customer_id, status_id, order_date, notes, items } = req.body;
 
     // Validate required fields
-    if (!customer_id || !status_id) {
-      return sendResponse(res, 400, 'error', 'Cliente y estado son campos requeridos');
+    if (!customer_id || status_id == null || !Array.isArray(items) || items.length === 0) {
+      return sendResponse(res, 400, 'error', 'Cliente, estado y al menos un producto son requeridos');
     }
 
     // Validate customer belongs to user
     const customer = await Customer.findById(customer_id, userId);
     if (!customer) {
-      return sendResponse(res, 400, 'error', 'Cliente no encontrado o no pertenece al usuario');
+      return sendResponse(res, 404, 'error', 'Cliente no encontrado o no pertenece al usuario');
     }
 
     // Validate the order exists
@@ -150,53 +150,51 @@ async function updateSalesOrder(req, res) {
       };
     });
 
-    // Calculate totalAmount if items are provided
-    let totalAmount = existingOrder.total_amount;
+    // Calculate totalAmount and validate products
+    let totalAmount = 0;
+    const validatedItems = [];
     
-    if (items && Array.isArray(items) && items.length > 0) {
-      // Validate all products belong to user
-      for (const item of items) {
-        if (!item.product_id || !item.quantity || !item.unit_price) {
-          return sendResponse(res, 400, 'error', 'Cada producto debe tener ID, cantidad y precio unitario');
-        }
-        
-        const productExists = await Product.findById(item.product_id, userId);
-        if (!productExists) {
-          return sendResponse(res, 404, 'error', `Producto con ID ${item.product_id} no encontrado o no pertenece al usuario`);
-        }
-        
-        // Check inventory for increased quantities
-        const existingQty = existingProductsMap[item.product_id] ? existingProductsMap[item.product_id].quantity : 0;
-        const qtyDifference = item.quantity - existingQty;
-        
-        if (qtyDifference > 0) {
-          // Need to check if we have enough inventory for the increased amount
-          const hasSufficientStock = await Product.hasSufficientStock(item.product_id, qtyDifference, userId);
-          if (!hasSufficientStock) {
-            return sendResponse(res, 400, 'error', `Producto con ID ${item.product_id} no tiene suficiente stock disponible para el incremento solicitado`);
-          }
+    for (const item of items) {
+      const qty = toNumber(item.quantity);
+      const price = toNumber(item.unit_price);
+      
+      if (!qty || qty <= 0 || price === null || price <= 0) {
+        return sendResponse(res, 400, 'error', 'Cantidad y precio unitario inválidos');
+      }
+      
+      const product = await Product.findById(item.product_id, userId);
+      if (!product) {
+        return sendResponse(res, 404, 'error', `Producto con ID ${item.product_id} no encontrado o no pertenece al usuario`);
+      }
+      
+      // Check inventory for increased quantities
+      const existingQty = existingProductsMap[item.product_id] ? existingProductsMap[item.product_id].quantity : 0;
+      const qtyDifference = qty - existingQty;
+      
+      if (qtyDifference > 0) {
+        // Need to check if we have enough inventory for the increased amount
+        const hasSufficientStock = await Product.hasSufficientStock(item.product_id, qtyDifference, userId);
+        if (!hasSufficientStock) {
+          return sendResponse(res, 400, 'error', `Producto con ID ${item.product_id} no tiene suficiente stock disponible para el incremento solicitado`);
         }
       }
-
-      // Calculate new totalAmount directly from items
-      totalAmount = items.reduce((sum, item) => sum + (item.quantity * item.unit_price), 0);
+      
+      totalAmount += qty * price;
+      validatedItems.push({
+        product_id: item.product_id,
+        quantity: qty,
+        unit_price: price
+      });
     }
 
-    // Format items for database
-    const formattedItems = items ? items.map(item => ({
-      product_id: item.product_id,
-      quantity: item.quantity,
-      unit_price: item.unit_price
-    })) : [];
-
-    // Update the sales order - the model will handle the transaction
+    // Update the sales order
     const updated = await SalesOrder.update(orderId, {
       customer_id,
       status_id,
       order_date,
       totalAmount,
       notes,
-      items: formattedItems
+      items: validatedItems
     }, userId);
     
     if (!updated) {
