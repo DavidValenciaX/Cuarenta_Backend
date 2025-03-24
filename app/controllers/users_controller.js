@@ -30,8 +30,8 @@ async function createUser(req, res) {
     }
 
     // Verificar si el correo ya está registrado
-    const usuarioExistente = await User.findByEmail(email);
-    if (usuarioExistente) {
+    const existingUser = await User.findByEmail(email);
+    if (existingUser) {
         return sendResponse(res, 400, 'error', 'El correo electrónico ya está registrado');
     }
 
