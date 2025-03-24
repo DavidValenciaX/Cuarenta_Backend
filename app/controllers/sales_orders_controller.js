@@ -20,8 +20,8 @@ async function createSalesOrder(req, res) {
       }
 
       // Validate all products belong to user and have sufficient stock
-      // Calculate subtotal while validating products
-      let subtotal = 0;
+      // Calculate total amount directly from items
+      let totalAmount = 0;
       for (const product of items) {
         if (!product.product_id || !product.quantity || !product.unit_price) {
           throw new Error('Cada producto debe tener ID, cantidad y precio unitario');
@@ -38,19 +38,18 @@ async function createSalesOrder(req, res) {
           throw new Error(`Producto con ID ${product.product_id} no tiene suficiente stock disponible`);
         }
 
-        // Add to subtotal
-        subtotal += product.quantity * product.unit_price;
+        // Add to total amount
+        totalAmount += product.quantity * product.unit_price;
       }
 
-      // Calculate total amount (including tax)
-      const totalAmount = subtotal * 1.19; // Assuming 19% tax rate
+      // Apply tax if needed
+      totalAmount = totalAmount * 1.19; // Assuming 19% tax rate
 
       // Create the sales order with its products
       const salesOrder = await SalesOrder.create({
         userId,
         customer_id,
         status_id,
-        subtotal,
         totalAmount,
         notes,
         items,
@@ -145,8 +144,7 @@ async function updateSalesOrder(req, res) {
       };
     });
 
-    // Calculate subtotal and totalAmount if items are provided
-    let subtotal = existingOrder.subtotal;
+    // Calculate totalAmount if items are provided
     let totalAmount = existingOrder.total_amount;
     
     if (items && Array.isArray(items) && items.length > 0) {
@@ -174,11 +172,8 @@ async function updateSalesOrder(req, res) {
         }
       }
 
-      // Calculate new subtotal from items
-      subtotal = items.reduce((sum, item) => sum + (item.quantity * item.unit_price), 0);
-      
-      // Apply simple tax calculation (19% VAT)
-      totalAmount = subtotal * 1.19;
+      // Calculate new totalAmount directly from items
+      totalAmount = items.reduce((sum, item) => sum + (item.quantity * item.unit_price), 0) * 1.19;
     }
 
     // Format items for database
@@ -193,7 +188,6 @@ async function updateSalesOrder(req, res) {
       customer_id,
       status_id,
       order_date,
-      subtotal,
       totalAmount,
       notes,
       items: formattedItems

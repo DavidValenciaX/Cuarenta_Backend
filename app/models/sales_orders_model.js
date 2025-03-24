@@ -18,15 +18,15 @@ class SalesOrder {
   }
 
   // Create a sales order with its products
-  static async create({ userId, customer_id, status_id, subtotal, totalAmount, notes, items, order_date, client }) {
+  static async create({ userId, customer_id, status_id, totalAmount, notes, items, order_date, client }) {
     // If client is provided, use it (part of an existing transaction)
     // Otherwise create a new transaction
     if (client) {
       // Insert the sales order
       const orderResult = await client.query(
-        `INSERT INTO public.sales_orders(user_id, customer_id, status_id, subtotal, total_amount, notes, order_date)
-         VALUES($1, $2, $3, $4, $5, $6, COALESCE($7, NOW())) RETURNING *`,
-        [userId, customer_id, status_id, subtotal, totalAmount, notes, order_date]
+        `INSERT INTO public.sales_orders(user_id, customer_id, status_id, total_amount, notes, order_date)
+         VALUES($1, $2, $3, $4, $5, COALESCE($6, NOW())) RETURNING *`,
+        [userId, customer_id, status_id, totalAmount, notes, order_date]
       );
       
       const salesOrder = orderResult.rows[0];
@@ -46,7 +46,7 @@ class SalesOrder {
     } else {
       // Execute within a new transaction
       return this.executeWithTransaction(async (client) => {
-        const orderData = { userId, customer_id, status_id, subtotal, totalAmount, notes, items, order_date, client };
+        const orderData = { userId, customer_id, status_id, totalAmount, notes, items, order_date, client };
         return await this.create(orderData);
       });
     }
@@ -93,16 +93,16 @@ class SalesOrder {
   }
 
   // Update a sales order
-  static async update(id, { customer_id, status_id, order_date, subtotal, totalAmount, notes, items }, userId, client = null) {
+  static async update(id, { customer_id, status_id, order_date, totalAmount, notes, items }, userId, client = null) {
     if (client) {
       // Build the update query based on whether order_date is provided
       let updateQuery = `
         UPDATE public.sales_orders
-        SET customer_id = $1, status_id = $2, subtotal = $3, total_amount = $4, notes = $5, updated_at = NOW()
+        SET customer_id = $1, status_id = $2, total_amount = $3, notes = $4, updated_at = NOW()
       `;
       
-      const queryParams = [customer_id, status_id, subtotal, totalAmount, notes];
-      let paramIndex = 6;
+      const queryParams = [customer_id, status_id, totalAmount, notes];
+      let paramIndex = 5;
       
       // Add order_date to the query if provided
       if (order_date) {
@@ -144,7 +144,7 @@ class SalesOrder {
     } else {
       // Execute within a new transaction
       return this.executeWithTransaction(async (client) => {
-        return await this.update(id, { customer_id, status_id, order_date, subtotal, totalAmount, notes, items }, userId, client);
+        return await this.update(id, { customer_id, status_id, order_date, totalAmount, notes, items }, userId, client);
       });
     }
   }

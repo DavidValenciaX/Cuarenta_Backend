@@ -26,8 +26,8 @@ async function createPurchaseOrder(req, res) {
       return sendResponse(res, 404, 'error', 'Proveedor inválido');
     }
 
-    // Calculate subtotal and validate products
-    let subtotal = 0;
+    // Calculate total amount directly and validate products
+    let total_amount = 0;
     const validatedItems = [];
     
     for (const item of items) {
@@ -43,7 +43,7 @@ async function createPurchaseOrder(req, res) {
         return sendResponse(res, 404, 'error', `Producto ${item.product_id} inválido`);
       }
       
-      subtotal += qty * price;
+      total_amount += qty * price;
       validatedItems.push({
         product_id: item.product_id,
         quantity: qty,
@@ -51,15 +51,12 @@ async function createPurchaseOrder(req, res) {
       });
     }
 
-    const total_amount = subtotal;
-
     // Create the purchase order
     const purchaseOrder = await PurchaseOrder.create({
       userId,
       supplier_id,
       status_id,
-      subtotal,
-      total_amount: total_amount,
+      total_amount,
       purchase_order_date,
       notes,
       items: validatedItems
@@ -135,8 +132,8 @@ async function updatePurchaseOrder(req, res) {
       return sendResponse(res, 404, 'error', 'Orden de compra no encontrada');
     }
 
-    // Calculate subtotal and validate products
-    let subtotal = 0;
+    // Calculate total_amount directly and validate products
+    let total_amount = 0;
     const validatedItems = [];
     
     for (const item of items) {
@@ -152,7 +149,7 @@ async function updatePurchaseOrder(req, res) {
         return sendResponse(res, 404, 'error', `Producto ${item.product_id} inválido`);
       }
       
-      subtotal += qty * price;
+      total_amount += qty * price;
       validatedItems.push({
         product_id: item.product_id,
         quantity: qty,
@@ -160,15 +157,12 @@ async function updatePurchaseOrder(req, res) {
       });
     }
 
-    const total_amount = subtotal;
-
     // Update the purchase order
     const updatedPurchaseOrder = await PurchaseOrder.update(purchaseOrderId, {
       supplier_id,
       status_id,
       purchase_order_date,
-      subtotal,
-      total_amount: total_amount,
+      total_amount,
       notes,
       items: validatedItems
     }, userId);

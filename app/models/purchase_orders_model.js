@@ -18,16 +18,16 @@ class PurchaseOrder {
   }
 
   // Create a purchase order with its products
-  static async create({ userId, supplier_id, status_id, subtotal, total_amount, purchase_order_date, notes, items, client }) {
+  static async create({ userId, supplier_id, status_id, total_amount, purchase_order_date, notes, items, client }) {
     // If client is provided, use it (part of an existing transaction)
     // Otherwise create a new transaction
     if (client) {
       // Insert the purchase order
       const purchaseOrderResult = await client.query(
-        `INSERT INTO public.purchase_orders(user_id, supplier_id, status_id, subtotal, total_amount, purchase_order_date, notes)
-         VALUES ($1, $2, $3, $4, $5, COALESCE($6, NOW()), $7)
+        `INSERT INTO public.purchase_orders(user_id, supplier_id, status_id, total_amount, purchase_order_date, notes)
+         VALUES ($1, $2, $3, $4, COALESCE($5, NOW()), $6)
          RETURNING *`,
-        [userId, supplier_id, status_id, subtotal, total_amount, purchase_order_date, notes]
+        [userId, supplier_id, status_id, total_amount, purchase_order_date, notes]
       );
       
       const purchaseOrder = purchaseOrderResult.rows[0];
@@ -82,7 +82,7 @@ class PurchaseOrder {
     } else {
       // Execute within a new transaction
       return this.executeWithTransaction(async (client) => {
-        const orderData = { userId, supplier_id, status_id, subtotal, total_amount, purchase_order_date, notes, items, client };
+        const orderData = { userId, supplier_id, status_id, total_amount, purchase_order_date, notes, items, client };
         return await this.create(orderData);
       });
     }
@@ -129,7 +129,7 @@ class PurchaseOrder {
   }
 
   // Update a purchase order
-  static async update(id, { supplier_id, status_id, purchase_order_date, subtotal, total_amount, notes, items }, userId, client = null) {
+  static async update(id, { supplier_id, status_id, purchase_order_date, total_amount, notes, items }, userId, client = null) {
     if (client) {
       // Verify the purchase order exists and belongs to user
       const existingPurchaseOrder = await this.validatePurchaseOrder(id, userId, client);
@@ -160,11 +160,11 @@ class PurchaseOrder {
       // Build the update query
       let updateQuery = `
         UPDATE public.purchase_orders
-        SET supplier_id = $1, status_id = $2, subtotal = $3, total_amount = $4, notes = $5, updated_at = NOW()
+        SET supplier_id = $1, status_id = $2, total_amount = $3, notes = $4, updated_at = NOW()
       `;
       
-      const queryParams = [supplier_id, status_id, subtotal, total_amount, notes];
-      let paramIndex = 6;
+      const queryParams = [supplier_id, status_id, total_amount, notes];
+      let paramIndex = 5;
       
       // Add purchase_order_date to the query if provided
       if (purchase_order_date) {
@@ -205,7 +205,7 @@ class PurchaseOrder {
     } else {
       // Execute within a new transaction
       return this.executeWithTransaction(async (client) => {
-        return await this.update(id, { supplier_id, status_id, purchase_order_date, subtotal, total_amount, notes, items }, userId, client);
+        return await this.update(id, { supplier_id, status_id, purchase_order_date, total_amount, notes, items }, userId, client);
       });
     }
   }
