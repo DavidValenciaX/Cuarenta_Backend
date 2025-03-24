@@ -44,7 +44,7 @@ router.use(verificarToken);
  *                 type: integer
  *                 description: Estado de la orden de venta
  *                 example: 1
- *               order_date:
+ *               sales_order_date:
  *                 type: string
  *                 format: date-time
  *                 example: "2023-06-15T10:00:00Z"
@@ -160,7 +160,7 @@ router.get('/:id', getSalesOrder);
  *               notes:
  *                 type: string
  *                 example: "Cliente solicita cambio de horario de entrega"
- *               order_date:
+ *               sales_order_date:
  *                 type: string
  *                 format: date-time
  *                 example: "2023-06-15T10:00:00Z"

@@ -13,7 +13,7 @@ function toNumber(value) {
 async function createSalesOrder(req, res) {
   try {
     const userId = req.usuario.userId;
-    const { customer_id, status_id, order_date, notes, items } = req.body;
+    const { customer_id, status_id, sales_order_date, notes, items } = req.body;
 
     // Validate required fields
     if (!customer_id || status_id == null || !Array.isArray(items) || items.length === 0) {
@@ -63,7 +63,7 @@ async function createSalesOrder(req, res) {
       customer_id,
       status_id,
       totalAmount,
-      order_date,
+      sales_order_date,
       notes,
       items: validatedItems
     });
@@ -119,7 +119,7 @@ async function updateSalesOrder(req, res) {
   try {
     const userId = req.usuario.userId;
     const salesOrderId = req.params.id;
-    const { customer_id, status_id, order_date, notes, items } = req.body;
+    const { customer_id, status_id, sales_order_date, notes, items } = req.body;
 
     // Validate required fields
     if (!customer_id || status_id == null || !Array.isArray(items) || items.length === 0) {
@@ -191,7 +191,7 @@ async function updateSalesOrder(req, res) {
     const updated = await SalesOrder.update(salesOrderId, {
       customer_id,
       status_id,
-      order_date,
+      sales_order_date,
       totalAmount,
       notes,
       items: validatedItems

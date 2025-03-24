@@ -18,15 +18,15 @@ class SalesOrder {
   }
 
   // Create a sales order with its products
-  static async create({ userId, customer_id, status_id, totalAmount, order_date, notes, items }) {
+  static async create({ userId, customer_id, status_id, totalAmount, sales_order_date, notes, items }) {
     // Execute within a transaction
     return this.executeWithTransaction(async (client) => {
       // Insert the sales order
       const salesOrderResult = await client.query(
-        `INSERT INTO public.sales_orders(user_id, customer_id, status_id, total_amount, order_date, notes)
+        `INSERT INTO public.sales_orders(user_id, customer_id, status_id, total_amount, sales_order_date, notes)
          VALUES ($1, $2, $3, $4, COALESCE($5, NOW()), $6)
          RETURNING *`,
-        [userId, customer_id, status_id, totalAmount, order_date, notes]
+        [userId, customer_id, status_id, totalAmount, sales_order_date, notes]
       );
       
       const salesOrder = salesOrderResult.rows[0];
@@ -67,7 +67,7 @@ class SalesOrder {
        JOIN public.customers c ON so.customer_id = c.id
        JOIN public.status_types st ON so.status_id = st.id
        WHERE so.user_id = $1 
-       ORDER BY so.order_date DESC`,
+       ORDER BY so.sales_order_date DESC`,
       [userId]
     );
     return rows;
@@ -100,7 +100,7 @@ class SalesOrder {
   }
 
   // Update a sales order
-  static async update(id, { customer_id, status_id, order_date, totalAmount, notes, items }, userId) {
+  static async update(id, { customer_id, status_id, sales_order_date, totalAmount, notes, items }, userId) {
     return this.executeWithTransaction(async (client) => {
       // Verify the sales order exists and belongs to user
       const existingSalesOrder = await this.findById(id, userId);
@@ -137,10 +137,10 @@ class SalesOrder {
       const queryParams = [customer_id, status_id, totalAmount, notes];
       let paramIndex = 5;
       
-      // Add order_date to the query if provided
-      if (order_date) {
-        updateQuery += `, order_date = $${paramIndex}`;
-        queryParams.push(order_date);
+      // Add sales_order_date to the query if provided
+      if (sales_order_date) {
+        updateQuery += `, sales_order_date = $${paramIndex}`;
+        queryParams.push(sales_order_date);
         paramIndex++;
       }
       
