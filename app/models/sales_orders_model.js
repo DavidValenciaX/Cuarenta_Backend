@@ -197,10 +197,10 @@ class SalesOrder {
   }
 
   // Validate sales order exists and belongs to user
-  static async validateSalesOrder(orderId, userId) {
+  static async validateSalesOrder(salesOrderId, userId) {
     const { rows } = await pool.query(
       `SELECT * FROM public.sales_orders WHERE id = $1 AND user_id = $2`,
-      [orderId, userId]
+      [salesOrderId, userId]
     );
     return rows[0];
   }

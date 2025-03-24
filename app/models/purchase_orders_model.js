@@ -22,14 +22,14 @@ class PurchaseOrder {
     // Execute within a transaction
     return this.executeWithTransaction(async (client) => {
       // Insert the purchase order
-      const orderResult = await client.query(
+      const purchaseOrderResult = await client.query(
         `INSERT INTO public.purchase_orders(user_id, supplier_id, status_id, total_amount, purchase_order_date, notes)
          VALUES ($1, $2, $3, $4, COALESCE($5, NOW()), $6)
          RETURNING *`,
         [userId, supplier_id, status_id, total_amount, purchase_order_date, notes]
       );
       
-      const purchaseOrder = orderResult.rows[0];
+      const purchaseOrder = purchaseOrderResult.rows[0];
       
       // Insert all the purchase order products
       if (items && items.length > 0) {
@@ -169,13 +169,13 @@ class PurchaseOrder {
       updateQuery += ` WHERE id = $${paramIndex} AND user_id = $${paramIndex + 1} RETURNING *`;
       queryParams.push(id, userId);
       
-      const orderResult = await client.query(updateQuery, queryParams);
+      const purchaseOrderResult = await client.query(updateQuery, queryParams);
       
-      if (orderResult.rows.length === 0) {
+      if (purchaseOrderResult.rows.length === 0) {
         return null;
       }
       
-      const purchaseOrder = orderResult.rows[0];
+      const purchaseOrder = purchaseOrderResult.rows[0];
       
       // If items are provided, add new items and update inventory
       if (items && items.length > 0) {
