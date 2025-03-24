@@ -12,7 +12,7 @@ function toNumber(value) {
 // Create a purchase order with its products
 async function createPurchaseOrder(req, res) {
   try {
-    const userId = req.usuario.userId;
+    const user_id = req.usuario.user_id;
     const { supplier_id, status_id, purchase_order_date, notes, items } = req.body;
   
     // Validate required fields
@@ -21,7 +21,7 @@ async function createPurchaseOrder(req, res) {
     }
   
     // Validate supplier
-    const supplier = await Supplier.findById(supplier_id, userId);
+    const supplier = await Supplier.findById(supplier_id, user_id);
     if (!supplier) {
       return sendResponse(res, 404, 'error', 'Proveedor no encontrado o no pertenece al usuario');
     }
@@ -38,7 +38,7 @@ async function createPurchaseOrder(req, res) {
         return sendResponse(res, 400, 'error', 'Cantidad y precio unitario inválidos');
       }
       
-      const product = await Product.findById(item.product_id, userId);
+      const product = await Product.findById(item.product_id, user_id);
       if (!product) {
         return sendResponse(res, 404, 'error', `Producto con ID ${item.product_id} no encontrado o no pertenece al usuario`);
       }
@@ -53,7 +53,7 @@ async function createPurchaseOrder(req, res) {
 
     // Create the purchase order
     const purchaseOrder = await PurchaseOrder.create({
-      userId,
+      user_id,
       supplier_id,
       status_id,
       total_amount,
@@ -72,8 +72,8 @@ async function createPurchaseOrder(req, res) {
 // Get all purchase orders for a user
 async function listPurchaseOrders(req, res) {
   try {
-    const userId = req.usuario.userId;
-    const purchaseOrders = await PurchaseOrder.findAllByUser(userId);
+    const user_id = req.usuario.user_id;
+    const purchaseOrders = await PurchaseOrder.findAllByUser(user_id);
     return sendResponse(res, 200, 'success', 'Órdenes de compra obtenidas', purchaseOrders);
   } catch (error) {
     console.error('Error al listar órdenes de compra:', error);
@@ -85,15 +85,15 @@ async function listPurchaseOrders(req, res) {
 async function getPurchaseOrder(req, res) {
   try {
     const purchaseOrderId = req.params.id;
-    const userId = req.usuario.userId;
+    const user_id = req.usuario.user_id;
     
-    const purchaseOrder = await PurchaseOrder.findById(purchaseOrderId, userId);
+    const purchaseOrder = await PurchaseOrder.findById(purchaseOrderId, user_id);
     if (!purchaseOrder) {
       return sendResponse(res, 404, 'error', 'Orden de compra no encontrada');
     }
     
     // Get the products for this purchase order
-    const products = await PurchaseOrder.getProducts(purchaseOrderId, userId);
+    const products = await PurchaseOrder.getProducts(purchaseOrderId, user_id);
     
     // Combine order and products data
     const result = {
@@ -111,7 +111,7 @@ async function getPurchaseOrder(req, res) {
 // Update a purchase order
 async function updatePurchaseOrder(req, res) {
   try {
-    const userId = req.usuario.userId;
+    const user_id = req.usuario.user_id;
     const purchaseOrderId = Number(req.params.id);
     const { supplier_id, status_id, purchase_order_date, notes, items } = req.body;
 
@@ -121,13 +121,13 @@ async function updatePurchaseOrder(req, res) {
     }
 
     // Validate supplier belongs to user
-    const supplier = await Supplier.findById(supplier_id, userId);
+    const supplier = await Supplier.findById(supplier_id, user_id);
     if (!supplier) {
       return sendResponse(res, 404, 'error', 'Proveedor no encontrado o no pertenece al usuario');
     }
 
     // Validate the order exists
-    const purchaseOrder = await PurchaseOrder.findById(purchaseOrderId, userId);
+    const purchaseOrder = await PurchaseOrder.findById(purchaseOrderId, user_id);
     if (!purchaseOrder) {
       return sendResponse(res, 404, 'error', 'Orden de compra no encontrada');
     }
@@ -144,7 +144,7 @@ async function updatePurchaseOrder(req, res) {
         return sendResponse(res, 400, 'error', 'Cantidad y precio unitario inválidos');
       }
       
-      const product = await Product.findById(item.product_id, userId);
+      const product = await Product.findById(item.product_id, user_id);
       if (!product) {
         return sendResponse(res, 404, 'error', `Producto con ID ${item.product_id} no encontrado o no pertenece al usuario`);
       }
@@ -165,7 +165,7 @@ async function updatePurchaseOrder(req, res) {
       total_amount,
       notes,
       items: validatedItems
-    }, userId);
+    }, user_id);
 
     if (!updatedPurchaseOrder) {
       return sendResponse(res, 404, 'error', 'Orden de compra no encontrada');
@@ -181,10 +181,10 @@ async function updatePurchaseOrder(req, res) {
 // Delete a purchase order
 async function deletePurchaseOrder(req, res) {
   try {
-    const userId = req.usuario.userId;
+    const user_id = req.usuario.user_id;
     const purchaseOrderId = Number(req.params.id);
 
-    const deletedPurchaseOrder = await PurchaseOrder.delete(purchaseOrderId, userId);
+    const deletedPurchaseOrder = await PurchaseOrder.delete(purchaseOrderId, user_id);
     
     if (!deletedPurchaseOrder) {
       return sendResponse(res, 404, 'error', 'Orden de compra no encontrada');

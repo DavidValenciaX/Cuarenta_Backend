@@ -43,7 +43,7 @@ class User {
   }
 
    //Metodo para confirmar correo
-   static async confirmUser(userId) {
+   static async confirmUser(user_id) {
     const query = `
       UPDATE public.users
       SET
@@ -62,12 +62,12 @@ class User {
       WHERE id = $1
       RETURNING id;
     `;
-    const { rows } = await pool.query(query, [userId]);
+    const { rows } = await pool.query(query, [user_id]);
     return rows[0]; 
   }
 
     // Actualizar token y vencimiento (reenviar)
-    static async updateConfirmationToken(userId, newToken, newExpiration) {
+    static async updateConfirmationToken(user_id, newToken, newExpiration) {
         const query = `
           UPDATE public.users
           SET 
@@ -77,7 +77,7 @@ class User {
           WHERE id = $3
           RETURNING id;
         `;
-        const values = [newToken, newExpiration, userId];
+        const values = [newToken, newExpiration, user_id];
         const { rows } = await pool.query(query, values);
         return rows[0];
       }
@@ -102,7 +102,7 @@ class User {
       
 
         // Actualizar token y expiración para el reseteo de contraseña
-  static async updateResetToken(userId, resetTokenHash, resetTokenExpiration) {
+  static async updateResetToken(user_id, resetTokenHash, resetTokenExpiration) {
     const query = `
       UPDATE public.users
       SET
@@ -112,7 +112,7 @@ class User {
       WHERE id = $3
       RETURNING id;
     `;
-    const values = [resetTokenHash, resetTokenExpiration, userId];
+    const values = [resetTokenHash, resetTokenExpiration, user_id];
     const { rows } = await pool.query(query, values);
     return rows[0];
   }
@@ -130,7 +130,7 @@ class User {
   }
 
   // Actualizar contraseña y limpiar token de reseteo
-  static async updatePassword(userId, newPasswordHash) {
+  static async updatePassword(user_id, newPasswordHash) {
     const query = `
       UPDATE public.users
       SET
@@ -141,7 +141,7 @@ class User {
       WHERE id = $2
       RETURNING id;
     `;
-    const values = [newPasswordHash, userId];
+    const values = [newPasswordHash, user_id];
     const { rows } = await pool.query(query, values);
     return rows[0];
   }

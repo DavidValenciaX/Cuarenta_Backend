@@ -12,7 +12,7 @@ function toNumber(value) {
 // Create a sales order with its products
 async function createSalesOrder(req, res) {
   try {
-    const userId = req.usuario.userId;
+    const user_id = req.usuario.user_id;
     const { customer_id, status_id, sales_order_date, notes, items } = req.body;
 
     // Validate required fields
@@ -21,7 +21,7 @@ async function createSalesOrder(req, res) {
     }
     
     // Validate customer
-    const customer = await Customer.findById(customer_id, userId);
+    const customer = await Customer.findById(customer_id, user_id);
     if (!customer) {
       return sendResponse(res, 404, 'error', 'Cliente no encontrado o no pertenece al usuario');
     }
@@ -38,13 +38,13 @@ async function createSalesOrder(req, res) {
         return sendResponse(res, 400, 'error', 'Cantidad y precio unitario inválidos');
       }
       
-      const product = await Product.findById(item.product_id, userId);
+      const product = await Product.findById(item.product_id, user_id);
       if (!product) {
         return sendResponse(res, 404, 'error', `Producto con ID ${item.product_id} no encontrado o no pertenece al usuario`);
       }
       
       // Check if product has sufficient stock
-      const hasSufficientStock = await Product.hasSufficientStock(item.product_id, qty, userId);
+      const hasSufficientStock = await Product.hasSufficientStock(item.product_id, qty, user_id);
       if (!hasSufficientStock) {
         return sendResponse(res, 400, 'error', `Producto con ID ${item.product_id} no tiene suficiente stock disponible`);
       }
@@ -59,7 +59,7 @@ async function createSalesOrder(req, res) {
 
     // Create the sales order
     const salesOrder = await SalesOrder.create({
-      userId,
+      user_id,
       customer_id,
       status_id,
       total_amount,
@@ -78,8 +78,8 @@ async function createSalesOrder(req, res) {
 // Get all sales orders for a user
 async function listSalesOrders(req, res) {
   try {
-    const userId = req.usuario.userId;
-    const salesOrders = await SalesOrder.findAllByUser(userId);
+    const user_id = req.usuario.user_id;
+    const salesOrders = await SalesOrder.findAllByUser(user_id);
     return sendResponse(res, 200, 'success', 'Órdenes de venta obtenidas', salesOrders);
   } catch (error) {
     console.error('Error al listar órdenes de venta:', error);
@@ -91,15 +91,15 @@ async function listSalesOrders(req, res) {
 async function getSalesOrder(req, res) {
   try {
     const salesOrderId = req.params.id;
-    const userId = req.usuario.userId;
+    const user_id = req.usuario.user_id;
 
-    const salesOrder = await SalesOrder.findById(salesOrderId, userId);
+    const salesOrder = await SalesOrder.findById(salesOrderId, user_id);
     if (!salesOrder) {
       return sendResponse(res, 404, 'error', 'Orden de venta no encontrada');
     }
 
     // Get the products for this sales order
-    const products = await SalesOrder.getProducts(salesOrderId, userId);
+    const products = await SalesOrder.getProducts(salesOrderId, user_id);
     
     // Combine order and products data
     const result = {
@@ -117,7 +117,7 @@ async function getSalesOrder(req, res) {
 // Update a sales order
 async function updateSalesOrder(req, res) {
   try {
-    const userId = req.usuario.userId;
+    const user_id = req.usuario.user_id;
     const salesOrderId = req.params.id;
     const { customer_id, status_id, sales_order_date, notes, items } = req.body;
 
@@ -127,19 +127,19 @@ async function updateSalesOrder(req, res) {
     }
 
     // Validate customer belongs to user
-    const customer = await Customer.findById(customer_id, userId);
+    const customer = await Customer.findById(customer_id, user_id);
     if (!customer) {
       return sendResponse(res, 404, 'error', 'Cliente no encontrado o no pertenece al usuario');
     }
 
     // Validate the order exists
-    const existingSalesOrder = await SalesOrder.findById(salesOrderId, userId);
+    const existingSalesOrder = await SalesOrder.findById(salesOrderId, user_id);
     if (!existingSalesOrder) {
       return sendResponse(res, 404, 'error', 'Orden de venta no encontrada');
     }
 
     // Get existing products for this order to calculate inventory changes
-    const existingProducts = await SalesOrder.getProducts(salesOrderId, userId);
+    const existingProducts = await SalesOrder.getProducts(salesOrderId, user_id);
     
     // Create a map of existing products for easier comparison
     const existingProductsMap = {};
@@ -162,7 +162,7 @@ async function updateSalesOrder(req, res) {
         return sendResponse(res, 400, 'error', 'Cantidad y precio unitario inválidos');
       }
       
-      const product = await Product.findById(item.product_id, userId);
+      const product = await Product.findById(item.product_id, user_id);
       if (!product) {
         return sendResponse(res, 404, 'error', `Producto con ID ${item.product_id} no encontrado o no pertenece al usuario`);
       }
@@ -173,7 +173,7 @@ async function updateSalesOrder(req, res) {
       
       if (qtyDifference > 0) {
         // Need to check if we have enough inventory for the increased amount
-        const hasSufficientStock = await Product.hasSufficientStock(item.product_id, qtyDifference, userId);
+        const hasSufficientStock = await Product.hasSufficientStock(item.product_id, qtyDifference, user_id);
         if (!hasSufficientStock) {
           return sendResponse(res, 400, 'error', `Producto con ID ${item.product_id} no tiene suficiente stock disponible para el incremento solicitado`);
         }
@@ -195,7 +195,7 @@ async function updateSalesOrder(req, res) {
       total_amount,
       notes,
       items: validatedItems
-    }, userId);
+    }, user_id);
     
     if (!updated) {
       return sendResponse(res, 404, 'error', 'No se pudo actualizar la orden de venta');
@@ -211,10 +211,10 @@ async function updateSalesOrder(req, res) {
 // Delete a sales order
 async function deleteSalesOrder(req, res) {
   try {
-    const userId = req.usuario.userId;
+    const user_id = req.usuario.user_id;
     const salesOrderId = req.params.id;
 
-    const deleted = await SalesOrder.delete(salesOrderId, userId);
+    const deleted = await SalesOrder.delete(salesOrderId, user_id);
     if (!deleted) {
       return sendResponse(res, 404, 'error', 'Orden de venta no encontrada');
     }

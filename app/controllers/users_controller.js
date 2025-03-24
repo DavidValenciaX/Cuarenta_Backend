@@ -55,7 +55,7 @@ async function createUser(req, res) {
     
 
     return sendResponse(res, 201, 'success', 'Usuario creado, código de confirmación enviado al correo', {
-        userId: newUser.id
+        user_id: newUser.id
       });
     } catch (error) {
       console.error('Error en crearUsuario:', error);
@@ -130,7 +130,7 @@ async function confirmEmail(req, res) {
       // Generar JWT con user ID 
       // Comentario en español: Se recomienda guardar la clave secreta en process.env.JWT_SECRET
       const token = jwt.sign(
-        { userId: user.id }, 
+        { user_id: user.id }, 
         process.env.JWT_SECRET, 
         { expiresIn: '5h' } // El token expira en 5 hora
       );

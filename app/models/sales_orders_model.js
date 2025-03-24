@@ -18,7 +18,7 @@ class SalesOrder {
   }
 
   // Create a sales order with its products
-  static async create({ userId, customer_id, status_id, total_amount, sales_order_date, notes, items }) {
+  static async create({ user_id, customer_id, status_id, total_amount, sales_order_date, notes, items }) {
     // Execute within a transaction
     return this.executeWithTransaction(async (client) => {
       // Insert the sales order
@@ -26,7 +26,7 @@ class SalesOrder {
         `INSERT INTO public.sales_orders(user_id, customer_id, status_id, total_amount, sales_order_date, notes)
          VALUES ($1, $2, $3, $4, COALESCE($5, NOW()), $6)
          RETURNING *`,
-        [userId, customer_id, status_id, total_amount, sales_order_date, notes]
+        [user_id, customer_id, status_id, total_amount, sales_order_date, notes]
       );
       
       const salesOrder = salesOrderResult.rows[0];
@@ -46,7 +46,7 @@ class SalesOrder {
              SET quantity = quantity - $1
              WHERE id = $2 AND user_id = $3
              RETURNING quantity`,
-            [item.quantity, item.product_id, userId]
+            [item.quantity, item.product_id, user_id]
           );
           
           if (!result.rows.length) {
@@ -60,7 +60,7 @@ class SalesOrder {
   }
 
   // Find all sales orders for a user
-  static async findAllByUser(userId) {
+  static async findAllByUser(user_id) {
     const { rows } = await pool.query(
       `SELECT so.*, c.name as customer_name, st.name as status_name
        FROM public.sales_orders so
@@ -68,42 +68,42 @@ class SalesOrder {
        JOIN public.status_types st ON so.status_id = st.id
        WHERE so.user_id = $1 
        ORDER BY so.sales_order_date DESC`,
-      [userId]
+      [user_id]
     );
     return rows;
   }
 
   // Find a sales order by ID
-  static async findById(id, userId) {
+  static async findById(id, user_id) {
     const { rows } = await pool.query(
       `SELECT so.*, c.name as customer_name, st.name as status_name
        FROM public.sales_orders so
        JOIN public.customers c ON so.customer_id = c.id
        JOIN public.status_types st ON so.status_id = st.id
        WHERE so.id = $1 AND so.user_id = $2`,
-      [id, userId]
+      [id, user_id]
     );
     return rows[0];
   }
 
   // Get products for a sales order
-  static async getProducts(salesOrderId, userId) {
+  static async getProducts(salesOrderId, user_id) {
     const { rows } = await pool.query(
       `SELECT sop.*, p.name as product_name, p.description as product_description
        FROM public.sales_order_products sop
        JOIN public.products p ON sop.product_id = p.id
        JOIN public.sales_orders so ON sop.sales_order_id = so.id
        WHERE sop.sales_order_id = $1 AND so.user_id = $2`,
-      [salesOrderId, userId]
+      [salesOrderId, user_id]
     );
     return rows;
   }
 
   // Update a sales order
-  static async update(id, { customer_id, status_id, sales_order_date, total_amount, notes, items }, userId) {
+  static async update(id, { customer_id, status_id, sales_order_date, total_amount, notes, items }, user_id) {
     return this.executeWithTransaction(async (client) => {
       // Verify the sales order exists and belongs to user
-      const existingSalesOrder = await this.findById(id, userId);
+      const existingSalesOrder = await this.findById(id, user_id);
       if (!existingSalesOrder) {
         return null;
       }
@@ -118,7 +118,7 @@ class SalesOrder {
       for (const item of oldItems) {
         await client.query(
           `UPDATE public.products SET quantity = quantity + $1 WHERE id = $2 AND user_id = $3`,
-          [item.quantity, item.product_id, userId]
+          [item.quantity, item.product_id, user_id]
         );
       }
       
@@ -145,7 +145,7 @@ class SalesOrder {
       }
       
       updateQuery += ` WHERE id = $${paramIndex} AND user_id = $${paramIndex + 1} RETURNING *`;
-      queryParams.push(id, userId);
+      queryParams.push(id, user_id);
       
       const salesOrderResult = await client.query(updateQuery, queryParams);
       
@@ -167,7 +167,7 @@ class SalesOrder {
           // Update product quantity (decrease stock)
           await client.query(
             `UPDATE public.products SET quantity = quantity - $1 WHERE id = $2 AND user_id = $3`,
-            [item.quantity, item.product_id, userId]
+            [item.quantity, item.product_id, user_id]
           );
         }
       }
@@ -177,30 +177,30 @@ class SalesOrder {
   }
 
   // Delete a sales order and its products (leveraging CASCADE)
-  static async delete(id, userId) {
+  static async delete(id, user_id) {
     return this.executeWithTransaction(async (client) => {
       const { rows } = await client.query(
         `DELETE FROM public.sales_orders WHERE id = $1 AND user_id = $2 RETURNING *`,
-        [id, userId]
+        [id, user_id]
       );
       return rows[0];
     });
   }
 
   // Validate customer and check if it belongs to user
-  static async validateCustomer(customer_id, userId) {
+  static async validateCustomer(customer_id, user_id) {
     const { rows } = await pool.query(
       `SELECT * FROM public.customers WHERE id = $1 AND user_id = $2`,
-      [customer_id, userId]
+      [customer_id, user_id]
     );
     return rows[0];
   }
 
   // Validate sales order exists and belongs to user
-  static async validateSalesOrder(salesOrderId, userId) {
+  static async validateSalesOrder(salesOrderId, user_id) {
     const { rows } = await pool.query(
       `SELECT * FROM public.sales_orders WHERE id = $1 AND user_id = $2`,
-      [salesOrderId, userId]
+      [salesOrderId, user_id]
     );
     return rows[0];
   }

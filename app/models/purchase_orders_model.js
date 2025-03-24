@@ -18,7 +18,7 @@ class PurchaseOrder {
   }
 
   // Create a purchase order with its products
-  static async create({ userId, supplier_id, status_id, total_amount, purchase_order_date, notes, items }) {
+  static async create({ user_id, supplier_id, status_id, total_amount, purchase_order_date, notes, items }) {
     // Execute within a transaction
     return this.executeWithTransaction(async (client) => {
       // Insert the purchase order
@@ -26,7 +26,7 @@ class PurchaseOrder {
         `INSERT INTO public.purchase_orders(user_id, supplier_id, status_id, total_amount, purchase_order_date, notes)
          VALUES ($1, $2, $3, $4, COALESCE($5, NOW()), $6)
          RETURNING *`,
-        [userId, supplier_id, status_id, total_amount, purchase_order_date, notes]
+        [user_id, supplier_id, status_id, total_amount, purchase_order_date, notes]
       );
       
       const purchaseOrder = purchaseOrderResult.rows[0];
@@ -46,7 +46,7 @@ class PurchaseOrder {
              SET quantity = quantity + $1
              WHERE id = $2 AND user_id = $3
              RETURNING unit_price`,
-            [item.quantity, item.product_id, userId]
+            [item.quantity, item.product_id, user_id]
           );
           
           if (!result.rows.length) {
@@ -63,7 +63,7 @@ class PurchaseOrder {
              WHERE pop.product_id = $1 AND po.user_id = $2
              ORDER BY po.purchase_order_date DESC
              LIMIT 1`,
-            [item.product_id, userId]
+            [item.product_id, user_id]
           );
           
           if (latest?.id === purchaseOrder.id && item.unit_price > currentUnitPrice) {
@@ -71,7 +71,7 @@ class PurchaseOrder {
               `UPDATE public.products
                SET unit_price = $1
                WHERE id = $2 AND user_id = $3`,
-              [item.unit_price, item.product_id, userId]
+              [item.unit_price, item.product_id, user_id]
             );
           }
         }
@@ -82,7 +82,7 @@ class PurchaseOrder {
   }
 
   // Find all purchase orders for a user
-  static async findAllByUser(userId) {
+  static async findAllByUser(user_id) {
     const { rows } = await pool.query(
       `SELECT po.*, s.name as supplier_name, st.name as status_name
        FROM public.purchase_orders po
@@ -90,42 +90,42 @@ class PurchaseOrder {
        JOIN public.status_types st ON po.status_id = st.id
        WHERE po.user_id = $1
        ORDER BY po.purchase_order_date DESC`,
-      [userId]
+      [user_id]
     );
     return rows;
   }
 
   // Find a purchase order by ID
-  static async findById(id, userId) {
+  static async findById(id, user_id) {
     const { rows } = await pool.query(
       `SELECT po.*, s.name as supplier_name, st.name as status_name
        FROM public.purchase_orders po
        JOIN public.suppliers s ON po.supplier_id = s.id
        JOIN public.status_types st ON po.status_id = st.id
        WHERE po.id = $1 AND po.user_id = $2`,
-      [id, userId]
+      [id, user_id]
     );
     return rows[0];
   }
 
   // Get products for a purchase order
-  static async getProducts(purchaseOrderId, userId) {
+  static async getProducts(purchaseOrderId, user_id) {
     const { rows } = await pool.query(
       `SELECT pop.*, p.name as product_name, p.description as product_description
        FROM public.purchase_order_products pop
        JOIN public.products p ON pop.product_id = p.id
        JOIN public.purchase_orders po ON pop.purchase_order_id = po.id
        WHERE pop.purchase_order_id = $1 AND po.user_id = $2`,
-      [purchaseOrderId, userId]
+      [purchaseOrderId, user_id]
     );
     return rows;
   }
 
   // Update a purchase order
-  static async update(id, { supplier_id, status_id, purchase_order_date, total_amount, notes, items }, userId) {
+  static async update(id, { supplier_id, status_id, purchase_order_date, total_amount, notes, items }, user_id) {
     return this.executeWithTransaction(async (client) => {
       // Verify the purchase order exists and belongs to user
-      const existingPurchaseOrder = await this.findById(id, userId);
+      const existingPurchaseOrder = await this.findById(id, user_id);
       if (!existingPurchaseOrder) {
         return null;
       }
@@ -140,7 +140,7 @@ class PurchaseOrder {
       for (const item of oldItems) {
         await client.query(
           `UPDATE public.products SET quantity = quantity - $1 WHERE id = $2 AND user_id = $3`,
-          [item.quantity, item.product_id, userId]
+          [item.quantity, item.product_id, user_id]
         );
       }
       
@@ -167,7 +167,7 @@ class PurchaseOrder {
       }
       
       updateQuery += ` WHERE id = $${paramIndex} AND user_id = $${paramIndex + 1} RETURNING *`;
-      queryParams.push(id, userId);
+      queryParams.push(id, user_id);
       
       const purchaseOrderResult = await client.query(updateQuery, queryParams);
       
@@ -189,7 +189,7 @@ class PurchaseOrder {
           // Update product quantity (increase stock)
           await client.query(
             `UPDATE public.products SET quantity = quantity + $1 WHERE id = $2 AND user_id = $3`,
-            [item.quantity, item.product_id, userId]
+            [item.quantity, item.product_id, user_id]
           );
         }
       }
@@ -199,7 +199,7 @@ class PurchaseOrder {
   }
 
   // Delete a purchase order and update inventory
-  static async delete(id, userId) {
+  static async delete(id, user_id) {
     return this.executeWithTransaction(async (client) => {
       // Get all items from the purchase order
       const { rows: items } = await client.query(
@@ -211,14 +211,14 @@ class PurchaseOrder {
       for (const { product_id, quantity } of items) {
         await client.query(
           `UPDATE public.products SET quantity = quantity - $1 WHERE id = $2 AND user_id = $3`,
-          [quantity, product_id, userId]
+          [quantity, product_id, user_id]
         );
       }
       
       // Delete the purchase order (will cascade delete its products)
       const { rows } = await client.query(
         `DELETE FROM public.purchase_orders WHERE id = $1 AND user_id = $2 RETURNING *`,
-        [id, userId]
+        [id, user_id]
       );
       
       return rows[0];
@@ -226,19 +226,19 @@ class PurchaseOrder {
   }
 
   // Validate supplier and check if it belongs to user
-  static async validateSupplier(supplier_id, userId) {
+  static async validateSupplier(supplier_id, user_id) {
     const { rows } = await pool.query(
       `SELECT * FROM public.suppliers WHERE id = $1 AND user_id = $2`,
-      [supplier_id, userId]
+      [supplier_id, user_id]
     );
     return rows[0];
   }
 
   // Validate purchase order exists and belongs to user
-  static async validatePurchaseOrder(orderId, userId) {
+  static async validatePurchaseOrder(orderId, user_id) {
     const { rows } = await pool.query(
       `SELECT * FROM public.purchase_orders WHERE id = $1 AND user_id = $2`,
-      [orderId, userId]
+      [orderId, user_id]
     );
     return rows[0];
   }

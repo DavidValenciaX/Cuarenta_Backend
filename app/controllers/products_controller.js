@@ -15,7 +15,7 @@ async function createProduct(req, res) {
     category_id, unit_of_measure_id,
     quantity, barcode
   } = req.body;
-  const userId = req.usuario.userId;
+  const user_id = req.usuario.user_id;
 
   // Campos requeridos
   if (!name || unit_price == null || unit_cost == null || !category_id || !unit_of_measure_id) {
@@ -40,27 +40,25 @@ async function createProduct(req, res) {
   barcode = typeof barcode === 'string' ? barcode.trim() : String(barcode || '').trim();
   if (barcode === '') barcode = null;
   
-  
-
   // Unicidad nombre
-  if (await Product.findByNameAndUser(name, userId)) {
+  if (await Product.findByNameAndUser(name, user_id)) {
     return sendResponse(res, 409, 'error', 'Ya existe un producto con ese nombre');
   }
 
   // Unicidad barcode
-  if (barcode && await Product.findByBarcodeAndUser(barcode, userId)) {
+  if (barcode && await Product.findByBarcodeAndUser(barcode, user_id)) {
     return sendResponse(res, 409, 'error', 'Código de barras ya registrado');
   }
 
   // Verificar relaciones pertenecen al usuario
-  if (!await Category.findById(category_id, userId)) {
+  if (!await Category.findById(category_id, user_id)) {
     return sendResponse(res, 404, 'error', 'Categoría no encontrada');
   }
 
   const product = await Product.create({
     name, description, unit_price, unit_cost,
     image_url, category_id,
-    unit_of_measure_id, quantity, barcode, userId
+    unit_of_measure_id, quantity, barcode, user_id
   });
   return sendResponse(res, 201, 'success', 'Producto creado', product);
 }
@@ -74,7 +72,7 @@ async function updateProduct(req, res) {
     category_id, unit_of_measure_id,
     quantity, barcode
   } = req.body;
-  const userId = req.usuario.userId;
+  const user_id = req.usuario.user_id;
 
   if (!name || unit_price == null || unit_cost == null || !category_id || !unit_of_measure_id) {
     return sendResponse(res, 400, 'error', 'Faltan campos requeridos');
@@ -96,17 +94,17 @@ async function updateProduct(req, res) {
   barcode = typeof barcode === 'string' ? barcode.trim() : String(barcode || '').trim();
   if (barcode === '') barcode = null;
 
-  const existingByName = await Product.findByNameAndUser(name, userId);
+  const existingByName = await Product.findByNameAndUser(name, user_id);
   if (existingByName && existingByName.id !== id) {
     return sendResponse(res, 409, 'error', 'Ya existe un producto con ese nombre');
   }
 
-  const existingByBarcode = barcode && await Product.findByBarcodeAndUser(barcode, userId);
+  const existingByBarcode = barcode && await Product.findByBarcodeAndUser(barcode, user_id);
   if (existingByBarcode && existingByBarcode.id !== id) {
     return sendResponse(res, 409, 'error', 'Código de barras ya registrado');
   }
 
-  if (!await Category.findById(category_id, userId)) {
+  if (!await Category.findById(category_id, user_id)) {
     return sendResponse(res, 404, 'error', 'Categoría no encontrada');
   }
 
@@ -114,25 +112,25 @@ async function updateProduct(req, res) {
     name, description, unit_price, unit_cost,
     image_url, category_id,
     unit_of_measure_id, quantity, barcode
-  }, userId);
+  }, user_id);
 
   if (!updated) return sendResponse(res, 404, 'error', 'Producto no encontrado');
   return sendResponse(res, 200, 'success', 'Producto actualizado', updated);
 }
 
 async function listProducts(req, res) {
-  const products = await Product.findAllByUser(req.usuario.userId);
+  const products = await Product.findAllByUser(req.usuario.user_id);
   return sendResponse(res, 200, 'success', 'Productos obtenidos', products);
 }
 
 async function getProduct(req, res) {
-  const product = await Product.findById(req.params.id, req.usuario.userId);
+  const product = await Product.findById(req.params.id, req.usuario.user_id);
   if (!product) return sendResponse(res, 404, 'error', 'Producto no encontrado');
   return sendResponse(res, 200, 'success', 'Producto encontrado', product);
 }
 
 async function deleteProduct(req, res) {
-  const deleted = await Product.delete(req.params.id, req.usuario.userId);
+  const deleted = await Product.delete(req.params.id, req.usuario.user_id);
   if (!deleted) return sendResponse(res, 404, 'error', 'Producto no encontrado');
   return sendResponse(res, 200, 'success', 'Producto eliminado');
 }
