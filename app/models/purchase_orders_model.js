@@ -82,7 +82,7 @@ class PurchaseOrder {
   }
 
   // Find all purchase orders for a user
-  static async findAllByUser(user_id) {
+  static async findAllByUser(userId) {
     const { rows } = await pool.query(
       `SELECT po.*, s.name as supplier_name, st.name as status_name
        FROM public.purchase_orders po
@@ -90,42 +90,42 @@ class PurchaseOrder {
        JOIN public.status_types st ON po.status_id = st.id
        WHERE po.user_id = $1
        ORDER BY po.purchase_order_date DESC`,
-      [user_id]
+      [userId]
     );
     return rows;
   }
 
   // Find a purchase order by ID
-  static async findById(id, user_id) {
+  static async findById(id, userId) {
     const { rows } = await pool.query(
       `SELECT po.*, s.name as supplier_name, st.name as status_name
        FROM public.purchase_orders po
        JOIN public.suppliers s ON po.supplier_id = s.id
        JOIN public.status_types st ON po.status_id = st.id
        WHERE po.id = $1 AND po.user_id = $2`,
-      [id, user_id]
+      [id, userId]
     );
     return rows[0];
   }
 
   // Get products for a purchase order
-  static async getProducts(purchaseOrderId, user_id) {
+  static async getProducts(purchaseOrderId, userId) {
     const { rows } = await pool.query(
       `SELECT pop.*, p.name as product_name, p.description as product_description
        FROM public.purchase_order_products pop
        JOIN public.products p ON pop.product_id = p.id
        JOIN public.purchase_orders po ON pop.purchase_order_id = po.id
        WHERE pop.purchase_order_id = $1 AND po.user_id = $2`,
-      [purchaseOrderId, user_id]
+      [purchaseOrderId, userId]
     );
     return rows;
   }
 
   // Update a purchase order
-  static async update(id, { supplier_id, status_id, purchase_order_date, total_amount, notes, items }, user_id) {
+  static async update(id, { supplier_id, status_id, purchase_order_date, total_amount, notes, items }, userId) {
     return this.executeWithTransaction(async (client) => {
       // Verify the purchase order exists and belongs to user
-      const existingPurchaseOrder = await this.findById(id, user_id);
+      const existingPurchaseOrder = await this.findById(id, userId);
       if (!existingPurchaseOrder) {
         return null;
       }
@@ -140,7 +140,7 @@ class PurchaseOrder {
       for (const item of oldItems) {
         await client.query(
           `UPDATE public.products SET quantity = quantity - $1 WHERE id = $2 AND user_id = $3`,
-          [item.quantity, item.product_id, user_id]
+          [item.quantity, item.product_id, userId]
         );
       }
       
@@ -167,7 +167,7 @@ class PurchaseOrder {
       }
       
       updateQuery += ` WHERE id = $${paramIndex} AND user_id = $${paramIndex + 1} RETURNING *`;
-      queryParams.push(id, user_id);
+      queryParams.push(id, userId);
       
       const purchaseOrderResult = await client.query(updateQuery, queryParams);
       
@@ -189,7 +189,7 @@ class PurchaseOrder {
           // Update product quantity (increase stock)
           await client.query(
             `UPDATE public.products SET quantity = quantity + $1 WHERE id = $2 AND user_id = $3`,
-            [item.quantity, item.product_id, user_id]
+            [item.quantity, item.product_id, userId]
           );
         }
       }
@@ -199,7 +199,7 @@ class PurchaseOrder {
   }
 
   // Delete a purchase order and update inventory
-  static async delete(id, user_id) {
+  static async delete(id, userId) {
     return this.executeWithTransaction(async (client) => {
       // Get all items from the purchase order
       const { rows: items } = await client.query(
@@ -211,14 +211,14 @@ class PurchaseOrder {
       for (const { product_id, quantity } of items) {
         await client.query(
           `UPDATE public.products SET quantity = quantity - $1 WHERE id = $2 AND user_id = $3`,
-          [quantity, product_id, user_id]
+          [quantity, product_id, userId]
         );
       }
       
       // Delete the purchase order (will cascade delete its products)
       const { rows } = await client.query(
         `DELETE FROM public.purchase_orders WHERE id = $1 AND user_id = $2 RETURNING *`,
-        [id, user_id]
+        [id, userId]
       );
       
       return rows[0];
@@ -226,19 +226,19 @@ class PurchaseOrder {
   }
 
   // Validate supplier and check if it belongs to user
-  static async validateSupplier(supplier_id, user_id) {
+  static async validateSupplier(supplierId, userId) {
     const { rows } = await pool.query(
       `SELECT * FROM public.suppliers WHERE id = $1 AND user_id = $2`,
-      [supplier_id, user_id]
+      [supplierId, userId]
     );
     return rows[0];
   }
 
   // Validate purchase order exists and belongs to user
-  static async validatePurchaseOrder(orderId, user_id) {
+  static async validatePurchaseOrder(orderId, userId) {
     const { rows } = await pool.query(
       `SELECT * FROM public.purchase_orders WHERE id = $1 AND user_id = $2`,
-      [orderId, user_id]
+      [orderId, userId]
     );
     return rows[0];
   }
