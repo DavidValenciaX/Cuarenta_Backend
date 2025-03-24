@@ -170,7 +170,7 @@ router.get('/:id', getProduct);
  *       404:
  *         description: Producto no encontrado
  *       409:
- *         description: "onflicto: nombre o código de barras duplicado"
+ *         description: "Conflicto: nombre o código de barras duplicado"
  *       401:
  *         description: Token inválido o expirado
  */

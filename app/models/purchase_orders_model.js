@@ -18,7 +18,7 @@ class PurchaseOrder {
   }
 
   // Create a purchase order with its products
-  static async create({ user_id, supplier_id, status_id, total_amount, purchase_order_date, notes, items }) {
+  static async create({ userId, supplierId, statusId, totalAmount, purchaseOrderDate, notes, items }) {
     // Execute within a transaction
     return this.executeWithTransaction(async (client) => {
       // Insert the purchase order
@@ -26,7 +26,7 @@ class PurchaseOrder {
         `INSERT INTO public.purchase_orders(user_id, supplier_id, status_id, total_amount, purchase_order_date, notes)
          VALUES ($1, $2, $3, $4, COALESCE($5, NOW()), $6)
          RETURNING *`,
-        [user_id, supplier_id, status_id, total_amount, purchase_order_date, notes]
+        [userId, supplierId, statusId, totalAmount, purchaseOrderDate, notes]
       );
       
       const purchaseOrder = purchaseOrderResult.rows[0];
@@ -37,7 +37,7 @@ class PurchaseOrder {
           await client.query(
             `INSERT INTO public.purchase_order_products(purchase_order_id, product_id, quantity, unit_price)
              VALUES ($1, $2, $3, $4)`,
-            [purchaseOrder.id, item.product_id, item.quantity, item.unit_price]
+            [purchaseOrder.id, item.productId, item.quantity, item.unitPrice]
           );
           
           // Update product quantity in inventory
@@ -46,14 +46,14 @@ class PurchaseOrder {
              SET quantity = quantity + $1
              WHERE id = $2 AND user_id = $3
              RETURNING unit_price`,
-            [item.quantity, item.product_id, user_id]
+            [item.quantity, item.productId, userId]
           );
           
           if (!result.rows.length) {
-            throw new Error(`No se pudo actualizar inventario para producto ${item.product_id}`);
+            throw new Error(`No se pudo actualizar inventario para producto ${item.productId}`);
           }
           
-          const currentUnitPrice = result.rows[0].unit_price;
+          const currentUnitPrice = result.rows[0].unitPrice;
           
           // Check if this purchase order is the most recent one for this product
           const { rows: [latest] } = await client.query(
@@ -63,15 +63,15 @@ class PurchaseOrder {
              WHERE pop.product_id = $1 AND po.user_id = $2
              ORDER BY po.purchase_order_date DESC
              LIMIT 1`,
-            [item.product_id, user_id]
+            [item.productId, userId]
           );
           
-          if (latest?.id === purchaseOrder.id && item.unit_price > currentUnitPrice) {
+          if (latest?.id === purchaseOrder.id && item.unitPrice > currentUnitPrice) {
             await client.query(
               `UPDATE public.products
                SET unit_price = $1
                WHERE id = $2 AND user_id = $3`,
-              [item.unit_price, item.product_id, user_id]
+              [item.unitPrice, item.productId, userId]
             );
           }
         }
@@ -122,7 +122,7 @@ class PurchaseOrder {
   }
 
   // Update a purchase order
-  static async update(id, { supplier_id, status_id, purchase_order_date, total_amount, notes, items }, userId) {
+  static async update(id, { supplierId, statusId, purchaseOrderDate, totalAmount, notes, items }, userId) {
     return this.executeWithTransaction(async (client) => {
       // Verify the purchase order exists and belongs to user
       const existingPurchaseOrder = await this.findById(id, userId);
@@ -140,7 +140,7 @@ class PurchaseOrder {
       for (const item of oldItems) {
         await client.query(
           `UPDATE public.products SET quantity = quantity - $1 WHERE id = $2 AND user_id = $3`,
-          [item.quantity, item.product_id, userId]
+          [item.quantity, item.productId, userId]
         );
       }
       
@@ -156,13 +156,13 @@ class PurchaseOrder {
         SET supplier_id = $1, status_id = $2, total_amount = $3, notes = $4, updated_at = NOW()
       `;
       
-      const queryParams = [supplier_id, status_id, total_amount, notes];
+      const queryParams = [supplierId, statusId, totalAmount, notes];
       let paramIndex = 5;
       
-      // Add purchase_order_date to the query if provided
-      if (purchase_order_date) {
+      // Add purchaseOrderDate to the query if provided
+      if (purchaseOrderDate) {
         updateQuery += `, purchase_order_date = $${paramIndex}`;
-        queryParams.push(purchase_order_date);
+        queryParams.push(purchaseOrderDate);
         paramIndex++;
       }
       
@@ -183,13 +183,13 @@ class PurchaseOrder {
           await client.query(
             `INSERT INTO public.purchase_order_products(purchase_order_id, product_id, quantity, unit_price)
              VALUES($1, $2, $3, $4)`,
-            [id, item.product_id, item.quantity, item.unit_price]
+            [id, item.productId, item.quantity, item.unitPrice]
           );
           
           // Update product quantity (increase stock)
           await client.query(
             `UPDATE public.products SET quantity = quantity + $1 WHERE id = $2 AND user_id = $3`,
-            [item.quantity, item.product_id, userId]
+            [item.quantity, item.productId, userId]
           );
         }
       }
@@ -208,10 +208,10 @@ class PurchaseOrder {
       );
       
       // Update inventory for each product
-      for (const { product_id, quantity } of items) {
+      for (const { productId, quantity } of items) {
         await client.query(
           `UPDATE public.products SET quantity = quantity - $1 WHERE id = $2 AND user_id = $3`,
-          [quantity, product_id, userId]
+          [quantity, productId, userId]
         );
       }
       

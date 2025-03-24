@@ -13,15 +13,15 @@ function toNumber(value) {
 async function createPurchaseOrder(req, res) {
   try {
     const userId = req.usuario.userId;
-    const { supplier_id, status_id, purchase_order_date, notes, items } = req.body;
+    const { supplierId, statusId, purchaseOrderDate, notes, items } = req.body;
   
     // Validate required fields
-    if (!supplier_id || status_id == null || !Array.isArray(items) || items.length === 0) {
+    if (!supplierId || statusId == null || !Array.isArray(items) || items.length === 0) {
       return sendResponse(res, 400, 'error', 'Proveedor, estado y al menos un producto son requeridos');
     }
   
     // Validate supplier
-    const supplier = await Supplier.findById(supplier_id, userId);
+    const supplier = await Supplier.findById(supplierId, userId);
     if (!supplier) {
       return sendResponse(res, 404, 'error', 'Proveedor no encontrado o no pertenece al usuario');
     }
@@ -32,32 +32,32 @@ async function createPurchaseOrder(req, res) {
     
     for (const item of items) {
       const qty = toNumber(item.quantity);
-      const price = toNumber(item.unit_price);
+      const price = toNumber(item.unitPrice);
       
       if (!qty || qty <= 0 || price === null || price <= 0) {
         return sendResponse(res, 400, 'error', 'Cantidad y precio unitario inválidos');
       }
       
-      const product = await Product.findById(item.product_id, userId);
+      const product = await Product.findById(item.productId, userId);
       if (!product) {
-        return sendResponse(res, 404, 'error', `Producto con ID ${item.product_id} no encontrado o no pertenece al usuario`);
+        return sendResponse(res, 404, 'error', `Producto con ID ${item.productId} no encontrado o no pertenece al usuario`);
       }
       
       totalAmount += qty * price;
       validatedItems.push({
-        product_id: item.product_id,
+        productId: item.productId,
         quantity: qty,
-        unit_price: price
+        unitPrice: price
       });
     }
 
     // Create the purchase order
     const purchaseOrder = await PurchaseOrder.create({
-      user_id: userId,
-      supplier_id,
-      status_id,
-      total_amount: totalAmount,
-      purchase_order_date,
+      userId,
+      supplierId,
+      statusId,
+      totalAmount,
+      purchaseOrderDate,
       notes,
       items: validatedItems
     });
@@ -113,15 +113,15 @@ async function updatePurchaseOrder(req, res) {
   try {
     const userId = req.usuario.userId;
     const purchaseOrderId = Number(req.params.id);
-    const { supplier_id, status_id, purchase_order_date, notes, items } = req.body;
+    const { supplierId, statusId, purchaseOrderDate, notes, items } = req.body;
 
     // Validate required fields
-    if (!supplier_id || status_id == null || !Array.isArray(items) || items.length === 0) {
+    if (!supplierId || statusId == null || !Array.isArray(items) || items.length === 0) {
       return sendResponse(res, 400, 'error', 'Proveedor, estado y al menos un producto son requeridos');
     }
 
     // Validate supplier belongs to user
-    const supplier = await Supplier.findById(supplier_id, userId);
+    const supplier = await Supplier.findById(supplierId, userId);
     if (!supplier) {
       return sendResponse(res, 404, 'error', 'Proveedor no encontrado o no pertenece al usuario');
     }
@@ -132,37 +132,37 @@ async function updatePurchaseOrder(req, res) {
       return sendResponse(res, 404, 'error', 'Orden de compra no encontrada');
     }
 
-    // Calculate total_amount and validate products
+    // Calculate totalAmount and validate products
     let totalAmount = 0;
     const validatedItems = [];
     
     for (const item of items) {
       const qty = toNumber(item.quantity);
-      const price = toNumber(item.unit_price);
+      const price = toNumber(item.unitPrice);
       
       if (!qty || qty <= 0 || price === null || price <= 0) {
         return sendResponse(res, 400, 'error', 'Cantidad y precio unitario inválidos');
       }
       
-      const product = await Product.findById(item.product_id, userId);
+      const product = await Product.findById(item.productId, userId);
       if (!product) {
-        return sendResponse(res, 404, 'error', `Producto con ID ${item.product_id} no encontrado o no pertenece al usuario`);
+        return sendResponse(res, 404, 'error', `Producto con ID ${item.productId} no encontrado o no pertenece al usuario`);
       }
       
       totalAmount += qty * price;
       validatedItems.push({
-        product_id: item.product_id,
+        productId: item.productId,
         quantity: qty,
-        unit_price: price
+        unitPrice: price
       });
     }
 
     // Update the purchase order
     const updatedPurchaseOrder = await PurchaseOrder.update(purchaseOrderId, {
-      supplier_id,
-      status_id,
-      purchase_order_date,
-      total_amount: totalAmount,
+      supplierId,
+      statusId,
+      purchaseOrderDate,
+      totalAmount,
       notes,
       items: validatedItems
     }, userId);
