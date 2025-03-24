@@ -55,7 +55,7 @@ const { verificarToken } = require('../middlewares/auth_middleware'); // Importa
  *                 message:
  *                   type: string
  *                   example: 'Usuario creado exitosamente'
- *                 user_id:
+ *                 userId:
  *                   type: number
  *                   example: 1
  *       400:

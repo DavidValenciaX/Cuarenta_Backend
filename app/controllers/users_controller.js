@@ -86,7 +86,7 @@ async function confirmEmail(req, res) {
         });
       }
   
-      // Si no está vencido, confirmar usuario -> status_id se pone en 'active'
+      // Si no está vencido, confirmar usuario -> statusId se pone en 'active'
       await User.confirmUser(user.id);
   
       return sendResponse(res, 200, 'success', 'Correo confirmado exitosamente');
@@ -106,13 +106,13 @@ async function confirmEmail(req, res) {
         return sendResponse(res, 400, 'error', 'Email y password son requeridos');
       }
   
-      // Buscar usuario por email (que incluya password_hash)
+      // Buscar usuario por email (que incluya passwordHash)
       const user = await User.findUserWithPasswordByEmail(email);
       if (!user) {
         return sendResponse(res, 401, 'error', 'Credenciales inválidas');
       }
   
-      if (user.status === 'pending_confirmation' && user.category === 'user') {
+      if (user.status === 'pending' && user.category === 'user') {
         return sendResponse(res, 403, 'error', 'Cuenta pendiente por confirmar');
       }
 
