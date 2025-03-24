@@ -20,6 +20,29 @@ class SalesOrder {
   // Create a sales order with its products
   static async create({ userId, customer_id, status_id, totalAmount, notes, items, order_date }) {
     return this.executeWithTransaction(async (client) => {
+      // Validate product stock before creating the order
+      for (const item of items) {
+        // Check if product exists and belongs to user
+        const { rows: productRows } = await client.query(
+          `SELECT * FROM public.products WHERE id = $1 AND user_id = $2`,
+          [item.product_id, userId]
+        );
+        
+        if (productRows.length === 0) {
+          throw new Error(`Producto con ID ${item.product_id} no encontrado o no pertenece al usuario`);
+        }
+        
+        // Check if product has sufficient stock
+        const { rows: stockRows } = await client.query(
+          `SELECT quantity FROM public.products WHERE id = $1 AND user_id = $2 AND quantity >= $3`,
+          [item.product_id, userId, item.quantity]
+        );
+        
+        if (stockRows.length === 0) {
+          throw new Error(`Producto con ID ${item.product_id} no tiene suficiente stock disponible`);
+        }
+      }
+      
       // Insert the sales order
       const orderResult = await client.query(
         `INSERT INTO public.sales_orders(user_id, customer_id, status_id, total_amount, notes, order_date)
@@ -29,13 +52,22 @@ class SalesOrder {
       
       const salesOrder = orderResult.rows[0];
       
-      // Insert all the sales order products
+      // Insert all the sales order products and update inventory
       if (items && items.length > 0) {
-        for (const product of items) {
+        for (const item of items) {
+          // Add item to sales order
           await client.query(
             `INSERT INTO public.sales_order_products(sales_order_id, product_id, quantity, unit_price)
              VALUES($1, $2, $3, $4)`,
-            [salesOrder.id, product.product_id, product.quantity, product.unit_price]
+            [salesOrder.id, item.product_id, item.quantity, item.unit_price]
+          );
+          
+          // Update product inventory (decrease stock)
+          await client.query(
+            `UPDATE public.products
+             SET quantity = quantity - $1
+             WHERE id = $2 AND user_id = $3`,
+            [item.quantity, item.product_id, userId]
           );
         }
       }

@@ -42,7 +42,7 @@ async function createSalesOrder(req, res) {
         totalAmount += product.quantity * product.unit_price;
       }
 
-      // Create the sales order with its products
+      // Create the sales order with its products - model will handle inventory checks and updates
       const salesOrder = await SalesOrder.create({
         userId,
         customer_id,
@@ -52,12 +52,6 @@ async function createSalesOrder(req, res) {
         items,
         order_date
       });
-
-      // Update product stock quantities
-      for (const product of items) {
-        // Subtract quantity (passing negative value to decrease stock)
-        await Product.updateStock(product.product_id, -product.quantity, userId);
-      }
 
     return sendResponse(res, 201, 'success', 'Orden de venta creada exitosamente', salesOrder);
   } catch (error) {
@@ -192,33 +186,6 @@ async function updateSalesOrder(req, res) {
     
     if (!updated) {
       return sendResponse(res, 404, 'error', 'No se pudo actualizar la orden de venta');
-    }
-    
-    // Process inventory adjustments for each product
-    
-    // First, handle items that were in the original order but are removed or changed
-    for (const product_id in existingProductsMap) {
-      const existingQty = existingProductsMap[product_id].quantity;
-      const newItem = items ? items.find(item => item.product_id == product_id) : null;
-      const newQty = newItem ? newItem.quantity : 0;
-      
-      // Calculate the difference in quantity (negative means we need to return stock)
-      const qtyDifference = newQty - existingQty;
-      
-      if (qtyDifference !== 0) {
-        // Update product stock (negative value decreases stock, positive increases)
-        await Product.updateStock(product_id, -qtyDifference, userId);
-      }
-    }
-    
-    // Now handle any new items that weren't in the original order
-    if (items && Array.isArray(items)) {
-      for (const item of items) {
-        if (!existingProductsMap[item.product_id]) {
-          // This is a new product, so decrease its stock by the full quantity
-          await Product.updateStock(item.product_id, -item.quantity, userId);
-        }
-      }
     }
 
     return sendResponse(res, 200, 'success', 'Orden de venta actualizada', updated);
