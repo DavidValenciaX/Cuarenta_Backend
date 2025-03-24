@@ -117,7 +117,7 @@ async function confirmEmail(req, res) {
       }
 
       // Comparar password ingresada con el hash en DB
-      const isMatch = await bcrypt.compare(password, user.passwordHash);
+      const isMatch = await bcrypt.compare(password, user.password_hash);
       if (!isMatch) {
         return sendResponse(res, 401, 'error', 'Credenciales inválidas');
       }
