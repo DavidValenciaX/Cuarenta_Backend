@@ -19,6 +19,15 @@ const swaggerOptions = {
       version: '1.0.0',
       description: 'Documentation of the API'
     },
+    tags: [
+      { name: 'Users', description: 'User management' },
+      { name: 'Categories', description: 'CRUD de categorías del usuario autenticado' },
+      { name: 'Products', description: 'CRUD de productos del usuario autenticado' },
+      { name: 'Customers', description: 'CRUD de clientes asociados al usuario autenticado' },
+      { name: 'Suppliers', description: 'CRUD de proveedores asociados al usuario autenticado' },
+      { name: 'Sales Orders', description: 'Gestión de órdenes de venta' },
+      { name: 'Purchase Orders', description: 'Gestión de órdenes de compra' }
+    ],
     components: {
       securitySchemes: {
         bearerAuth: {
