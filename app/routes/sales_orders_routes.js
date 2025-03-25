@@ -58,7 +58,6 @@ router.use(verificarToken);
  *                   required:
  *                     - productId
  *                     - quantity
- *                     - unitPrice
  *                   properties:
  *                     productId:
  *                       type: integer
@@ -66,10 +65,6 @@ router.use(verificarToken);
  *                     quantity:
  *                       type: integer
  *                       example: 5
- *                     unitPrice:
- *                       type: number
- *                       format: decimal
- *                       example: 200.00
  *     responses:
  *       201:
  *         description: Orden de venta creada exitosamente
@@ -171,7 +166,6 @@ router.get('/:id', getSalesOrder);
  *                   required:
  *                     - productId
  *                     - quantity
- *                     - unitPrice
  *                   properties:
  *                     productId:
  *                       type: integer
@@ -179,10 +173,6 @@ router.get('/:id', getSalesOrder);
  *                     quantity:
  *                       type: integer
  *                       example: 5
- *                     unitPrice:
- *                       type: number
- *                       format: decimal
- *                       example: 200.00
  *     responses:
  *       200:
  *         description: Orden de venta actualizada
