@@ -53,7 +53,7 @@ class PurchaseOrder {
             throw new Error(`No se pudo actualizar inventario para producto ${item.productId}`);
           }
           
-          const currentUnitPrice = result.rows[0].unitPrice;
+          const currentUnitPrice = result.rows[0].unit_price;
           
           // Check if this purchase order is the most recent one for this product
           const { rows: [latest] } = await client.query(
@@ -140,7 +140,7 @@ class PurchaseOrder {
       for (const item of oldItems) {
         await client.query(
           `UPDATE public.products SET quantity = quantity - $1 WHERE id = $2 AND user_id = $3`,
-          [item.quantity, item.productId, userId]
+          [item.quantity, item.product_id, userId]
         );
       }
       
@@ -208,10 +208,10 @@ class PurchaseOrder {
       );
       
       // Update inventory for each product
-      for (const { productId, quantity } of items) {
+      for (const { product_id, quantity } of items) {
         await client.query(
           `UPDATE public.products SET quantity = quantity - $1 WHERE id = $2 AND user_id = $3`,
-          [quantity, productId, userId]
+          [quantity, product_id, userId]
         );
       }
       
