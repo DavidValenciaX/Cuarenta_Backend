@@ -146,9 +146,9 @@ async function updateSalesOrder(req, res) {
     // Create a map of existing products for easier comparison
     const existingProductsMap = {};
     existingProducts.forEach(product => {
-      existingProductsMap[product.productId] = {
+      existingProductsMap[product.product_id] = {
         quantity: product.quantity,
-        productId: product.productId
+        productId: product.product_id
       };
     });
 

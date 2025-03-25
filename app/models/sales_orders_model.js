@@ -118,7 +118,7 @@ class SalesOrder {
       for (const item of oldItems) {
         await client.query(
           `UPDATE public.products SET quantity = quantity + $1 WHERE id = $2 AND user_id = $3`,
-          [item.quantity, item.productId, userId]
+          [item.quantity, item.product_id, userId]
         );
       }
       
