@@ -143,7 +143,7 @@ class PurchaseOrder {
       // Build the update query
       let updateQuery = `
         UPDATE public.purchase_orders
-        SET supplier_id = $1, status_id = $2, total_amount = $3, notes = $4, updated_at = NOW()
+        SET supplier_id = $1, status_id = $2, total_amount = $3, notes = $4
       `;
       
       const queryParams = [supplierId, statusId, totalAmount, notes];

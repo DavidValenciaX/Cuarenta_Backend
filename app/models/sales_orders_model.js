@@ -131,7 +131,7 @@ class SalesOrder {
       // Build the update query
       let updateQuery = `
         UPDATE public.sales_orders
-        SET customer_id = $1, status_id = $2, total_amount = $3, notes = $4, updated_at = NOW()
+        SET customer_id = $1, status_id = $2, total_amount = $3, notes = $4
       `;
       
       const queryParams = [customerId, statusId, totalAmount, notes];

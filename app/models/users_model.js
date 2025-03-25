@@ -5,8 +5,8 @@ class User {
       const query = `
         INSERT INTO public.users (
           full_name, company_name, password_hash, email, phone, 
-          confirmation_token_hash, confirmation_token_expiration, created_at, updated_at, status_id
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW(), (
+          confirmation_token_hash, confirmation_token_expiration, status_id
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, (
           SELECT st.id 
           FROM status_types st
           JOIN status_categories sc 
@@ -57,8 +57,7 @@ class User {
           JOIN status_categories sc ON st.category_id = sc.id
           WHERE sc.name = 'user'
             AND st.name = 'active'
-        ),
-        updated_at = NOW()
+        )
       WHERE id = $1
       RETURNING id;
     `;
@@ -72,8 +71,7 @@ class User {
           UPDATE public.users
           SET 
             confirmation_token_hash = $1,
-            confirmation_token_expiration = $2,
-            updated_at = NOW()
+            confirmation_token_expiration = $2
           WHERE id = $3
           RETURNING id;
         `;
@@ -106,8 +104,7 @@ class User {
       UPDATE public.users
       SET
         password_reset_token_hash = $1,
-        password_reset_token_expiration = $2,
-        updated_at = NOW()
+        password_reset_token_expiration = $2
       WHERE id = $3
       RETURNING id;
     `;
@@ -135,8 +132,7 @@ class User {
       SET
         password_hash = $1,
         password_reset_token_hash = null,
-        password_reset_token_expiration = null,
-        updated_at = NOW()
+        password_reset_token_expiration = null
       WHERE id = $2
       RETURNING id;
     `;

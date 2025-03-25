@@ -44,7 +44,7 @@ class Customer {
 
   static async update(id, { name, email, phone, address }, userId) {
     const { rows } = await pool.query(
-      `UPDATE public.customers SET name=$1, email=$2, phone=$3, address=$4, updated_at=NOW()
+      `UPDATE public.customers SET name=$1, email=$2, phone=$3, address=$4
        WHERE id=$5 AND user_id=$6 RETURNING *`,
       [name, email, phone, address, id, userId]
     );
