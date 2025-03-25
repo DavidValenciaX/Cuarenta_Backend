@@ -32,10 +32,10 @@ async function createPurchaseOrder(req, res) {
     
     for (const item of items) {
       const qty = toNumber(item.quantity);
-      const price = toNumber(item.unitPrice);
+      const cost = toNumber(item.unitCost);
       
-      if (!qty || qty <= 0 || price === null || price <= 0) {
-        return sendResponse(res, 400, 'error', 'Cantidad y precio unitario inválidos');
+      if (!qty || qty <= 0 || cost === null || cost <= 0) {
+        return sendResponse(res, 400, 'error', 'Cantidad y costo unitario inválidos');
       }
       
       const product = await Product.findById(item.productId, userId);
@@ -43,11 +43,11 @@ async function createPurchaseOrder(req, res) {
         return sendResponse(res, 404, 'error', `Producto con ID ${item.productId} no encontrado o no pertenece al usuario`);
       }
       
-      totalAmount += qty * price;
+      totalAmount += qty * cost;
       validatedItems.push({
         productId: item.productId,
         quantity: qty,
-        unitPrice: price
+        unitCost: cost
       });
     }
 
@@ -138,10 +138,10 @@ async function updatePurchaseOrder(req, res) {
     
     for (const item of items) {
       const qty = toNumber(item.quantity);
-      const price = toNumber(item.unitPrice);
+      const cost = toNumber(item.unitCost);
       
-      if (!qty || qty <= 0 || price === null || price <= 0) {
-        return sendResponse(res, 400, 'error', 'Cantidad y precio unitario inválidos');
+      if (!qty || qty <= 0 || cost === null || cost <= 0) {
+        return sendResponse(res, 400, 'error', 'Cantidad y costo unitario inválidos');
       }
       
       const product = await Product.findById(item.productId, userId);
@@ -149,11 +149,11 @@ async function updatePurchaseOrder(req, res) {
         return sendResponse(res, 404, 'error', `Producto con ID ${item.productId} no encontrado o no pertenece al usuario`);
       }
       
-      totalAmount += qty * price;
+      totalAmount += qty * cost;
       validatedItems.push({
         productId: item.productId,
         quantity: qty,
-        unitPrice: price
+        unitCost: cost
       });
     }
 

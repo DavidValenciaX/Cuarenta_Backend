@@ -35,9 +35,9 @@ class PurchaseOrder {
       if (items && items.length > 0) {
         for (const item of items) {
           await client.query(
-            `INSERT INTO public.purchase_order_products(purchase_order_id, product_id, quantity, unit_price)
+            `INSERT INTO public.purchase_order_products(purchase_order_id, product_id, quantity, unit_cost)
              VALUES ($1, $2, $3, $4)`,
-            [purchaseOrder.id, item.productId, item.quantity, item.unitPrice]
+            [purchaseOrder.id, item.productId, item.quantity, item.unitCost]
           );
           
           // Update product quantity in inventory
@@ -55,13 +55,13 @@ class PurchaseOrder {
           
           const currentUnitCost = result.rows[0].unit_cost;
           
-          if (item.unitPrice > currentUnitCost) {
+          if (item.unitCost > currentUnitCost) {
             // Update the unit cost for the product
             await client.query(
               `UPDATE public.products
                SET unit_cost = $1
                WHERE id = $2 AND user_id = $3`,
-              [item.unitPrice, item.productId, userId]
+              [item.unitCost, item.productId, userId]
             );
           }
         }
@@ -171,9 +171,9 @@ class PurchaseOrder {
       if (items && items.length > 0) {
         for (const item of items) {
           await client.query(
-            `INSERT INTO public.purchase_order_products(purchase_order_id, product_id, quantity, unit_price)
+            `INSERT INTO public.purchase_order_products(purchase_order_id, product_id, quantity, unit_cost)
              VALUES($1, $2, $3, $4)`,
-            [id, item.productId, item.quantity, item.unitPrice]
+            [id, item.productId, item.quantity, item.unitCost]
           );
           
           // Update product quantity (increase stock)
