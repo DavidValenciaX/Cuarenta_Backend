@@ -45,7 +45,7 @@ class PurchaseOrder {
             `UPDATE public.products
              SET quantity = quantity + $1
              WHERE id = $2 AND user_id = $3
-             RETURNING unit_price`,
+             RETURNING unit_cost`,
             [item.quantity, item.productId, userId]
           );
           
@@ -53,23 +53,13 @@ class PurchaseOrder {
             throw new Error(`No se pudo actualizar inventario para producto ${item.productId}`);
           }
           
-          const currentUnitPrice = result.rows[0].unit_price;
+          const currentUnitCost = result.rows[0].unit_cost;
           
-          // Check if this purchase order is the most recent one for this product
-          const { rows: [latest] } = await client.query(
-            `SELECT po.id
-             FROM public.purchase_orders po
-             JOIN public.purchase_order_products pop ON pop.purchase_order_id = po.id
-             WHERE pop.product_id = $1 AND po.user_id = $2
-             ORDER BY po.purchase_order_date DESC
-             LIMIT 1`,
-            [item.productId, userId]
-          );
-          
-          if (latest?.id === purchaseOrder.id && item.unitPrice > currentUnitPrice) {
+          if (item.unitPrice > currentUnitCost) {
+            // Update the unit cost for the product
             await client.query(
               `UPDATE public.products
-               SET unit_price = $1
+               SET unit_cost = $1
                WHERE id = $2 AND user_id = $3`,
               [item.unitPrice, item.productId, userId]
             );
