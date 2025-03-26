@@ -131,18 +131,41 @@ class PurchaseOrder {
         return null;
       }
 
+      // Get the old status name
+      const { rows: oldStatusInfo } = await client.query(
+        `SELECT name FROM public.status_types WHERE id = $1`,
+        [existingPurchaseOrder.status_id]
+      );
+      const oldStatusName = oldStatusInfo[0]?.name;
+
+      // Get the new status name
+      const { rows: newStatusInfo } = await client.query(
+        `SELECT name FROM public.status_types WHERE id = $1`,
+        [statusId]
+      );
+      const newStatusName = newStatusInfo[0]?.name;
+
       // Get existing items
       const { rows: oldItems } = await client.query(
         `SELECT product_id, quantity FROM public.purchase_order_products WHERE purchase_order_id = $1`,
         [id]
       );
       
-      // Revert inventory for old items (decrease from inventory)
-      for (const item of oldItems) {
-        await client.query(
-          `UPDATE public.products SET quantity = quantity - $1 WHERE id = $2 AND user_id = $3`,
-          [item.quantity, item.product_id, userId]
-        );
+      // Create a mapping of old items by product_id for quick lookup
+      const oldItemsMap = {};
+      oldItems.forEach(item => {
+        oldItemsMap[item.product_id] = item.quantity;
+      });
+      
+      // Handle inventory changes based on status transition
+      if (oldStatusName === 'confirmed' && (newStatusName === 'pending' || newStatusName === 'cancelled')) {
+        // If changing from confirmed to pending/cancelled, subtract products from inventory
+        for (const item of oldItems) {
+          await client.query(
+            `UPDATE public.products SET quantity = quantity - $1 WHERE id = $2 AND user_id = $3`,
+            [item.quantity, item.product_id, userId]
+          );
+        }
       }
       
       // Delete old items
@@ -178,7 +201,7 @@ class PurchaseOrder {
       
       const purchaseOrder = purchaseOrderResult.rows[0];
       
-      // If items are provided, add new items and update inventory
+      // If items are provided, add new items
       if (items && items.length > 0) {
         for (const item of items) {
           await client.query(
@@ -187,11 +210,32 @@ class PurchaseOrder {
             [id, item.productId, item.quantity, item.unitCost]
           );
           
-          // Update product quantity (increase stock)
-          await client.query(
-            `UPDATE public.products SET quantity = quantity + $1 WHERE id = $2 AND user_id = $3`,
-            [item.quantity, item.productId, userId]
-          );
+          // Update inventory based on new status
+          if (newStatusName === 'confirmed') {
+            // If old status was also confirmed, only add the difference to inventory
+            if (oldStatusName === 'confirmed') {
+              const oldQuantity = oldItemsMap[item.productId] || 0;
+              const quantityDifference = item.quantity - oldQuantity;
+              
+              await client.query(
+                  `UPDATE public.products SET quantity = quantity + $1 WHERE id = $2 AND user_id = $3`,
+                  [quantityDifference, item.productId, userId]
+                );
+              }
+              
+            // Update unit cost if the new cost is higher (keep existing logic)
+            const { rows: productInfo } = await client.query(
+              `SELECT unit_cost FROM public.products WHERE id = $1 AND user_id = $2`,
+              [item.productId, userId]
+            );
+            
+            if (productInfo.length > 0 && item.unitCost > productInfo[0].unit_cost) {
+              await client.query(
+                `UPDATE public.products SET unit_cost = $1 WHERE id = $2 AND user_id = $3`,
+                [item.unitCost, item.productId, userId]
+              );
+            }
+          }
         }
       }
       
