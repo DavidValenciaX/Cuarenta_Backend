@@ -1,4 +1,5 @@
 const pool = require('../config/data_base');
+const InventoryTransaction = require('./inventory_transactions_model');
 
 class SalesOrder {
   // Utility method to execute operations within a transaction
@@ -43,15 +44,18 @@ class SalesOrder {
       // Insert all the sales order products
       if (items && items.length > 0) {
         for (const item of items) {
-          await client.query(
+          const result = await client.query(
             `INSERT INTO public.sales_order_products(sales_order_id, product_id, quantity, unit_price)
-             VALUES ($1, $2, $3, $4)`,
+             VALUES ($1, $2, $3, $4)
+             RETURNING id`,
             [salesOrder.id, item.productId, item.quantity, item.unitPrice]
           );
           
+          const salesOrderProductId = result.rows[0].id;
+          
           // Update product inventory (decrease stock) only if status is 'confirmed'
           if (shouldUpdateInventory) {
-            const result = await client.query(
+            const productResult = await client.query(
               `UPDATE public.products
                SET quantity = quantity - $1
                WHERE id = $2 AND user_id = $3
@@ -59,9 +63,19 @@ class SalesOrder {
               [item.quantity, item.productId, userId]
             );
             
-            if (!result.rows.length) {
+            if (!productResult.rows.length) {
               throw new Error(`No se pudo actualizar inventario para producto ${item.productId}`);
             }
+
+            // Record the inventory transaction
+            await InventoryTransaction.recordTransaction(client, {
+              userId,
+              productId: item.productId,
+              quantity: -item.quantity, // Negative for sales (stock decrease)
+              transactionTypeId: InventoryTransaction.TRANSACTION_TYPES.SALES_ORDER,
+              salesOrderProductId: salesOrderProductId,
+              purchaseOrderProductId: null
+            });
           }
         }
       }
@@ -153,6 +167,16 @@ class SalesOrder {
             `UPDATE public.products SET quantity = quantity + $1 WHERE id = $2 AND user_id = $3`,
             [item.quantity, item.product_id, userId]
           );
+
+          // Record inventory transaction for returning items to stock
+          await InventoryTransaction.recordTransaction(client, {
+            userId,
+            productId: item.product_id,
+            quantity: item.quantity, // Positive for returned to inventory
+            transactionTypeId: InventoryTransaction.TRANSACTION_TYPES.ADJUSTMENT,
+            salesOrderProductId: null,
+            purchaseOrderProductId: null
+          });
         }
       }
       
@@ -192,11 +216,14 @@ class SalesOrder {
       // If items are provided, add new items and update inventory
       if (items && items.length > 0) {
         for (const item of items) {
-          await client.query(
+          const result = await client.query(
             `INSERT INTO public.sales_order_products(sales_order_id, product_id, quantity, unit_price)
-             VALUES($1, $2, $3, $4)`,
+             VALUES($1, $2, $3, $4)
+             RETURNING id`,
             [id, item.productId, item.quantity, item.unitPrice]
           );
+          
+          const salesOrderProductId = result.rows[0].id;
           
           // Update inventory based on new status
           if (newStatusName === 'confirmed') {
@@ -210,6 +237,16 @@ class SalesOrder {
                   `UPDATE public.products SET quantity = quantity - $1 WHERE id = $2 AND user_id = $3`,
                   [quantityDifference, item.productId, userId]
                 );
+
+                // Record inventory transaction for the quantity difference
+                await InventoryTransaction.recordTransaction(client, {
+                  userId,
+                  productId: item.productId,
+                  quantity: -quantityDifference, // Negative for decreasing stock
+                  transactionTypeId: InventoryTransaction.TRANSACTION_TYPES.SALES_ORDER,
+                  salesOrderProductId: salesOrderProductId,
+                  purchaseOrderProductId: null
+                });
               }
             } else {
               // If changing from another status to confirmed, remove full quantity
@@ -217,6 +254,16 @@ class SalesOrder {
                 `UPDATE public.products SET quantity = quantity - $1 WHERE id = $2 AND user_id = $3`,
                 [item.quantity, item.productId, userId]
               );
+
+              // Record inventory transaction for new confirmed order
+              await InventoryTransaction.recordTransaction(client, {
+                userId,
+                productId: item.productId,
+                quantity: -item.quantity, // Negative for decreasing stock
+                transactionTypeId: InventoryTransaction.TRANSACTION_TYPES.SALES_ORDER,
+                salesOrderProductId: salesOrderProductId,
+                purchaseOrderProductId: null
+              });
             }
           }
         }
@@ -256,6 +303,16 @@ class SalesOrder {
             `UPDATE public.products SET quantity = quantity + $1 WHERE id = $2 AND user_id = $3`,
             [quantity, product_id, userId]
           );
+
+          // Record inventory transaction for putting items back in stock
+          await InventoryTransaction.recordTransaction(client, {
+            userId,
+            productId: product_id,
+            quantity: quantity, // Positive for increasing stock
+            transactionTypeId: InventoryTransaction.TRANSACTION_TYPES.ADJUSTMENT,
+            salesOrderProductId: null,
+            purchaseOrderProductId: null
+          });
         }
       }
       

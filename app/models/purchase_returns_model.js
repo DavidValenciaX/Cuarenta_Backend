@@ -1,4 +1,5 @@
 const pool = require('../config/data_base');
+const InventoryTransaction = require('./inventory_transactions_model');
 
 class PurchaseReturn {
   // Utility method to execute operations within a transaction
@@ -46,11 +47,12 @@ class PurchaseReturn {
       if (items && items.length > 0) {
         for (const item of items) {
           try {
-            await client.query(
+            const result = await client.query(
               `INSERT INTO public.purchase_return_products(
                  purchase_return_id, product_id, quantity, status_id
                )
-               VALUES ($1, $2, $3, $4)`,
+               VALUES ($1, $2, $3, $4)
+               RETURNING id`,
               [
                 purchaseReturn.id, 
                 item.productId, 
@@ -59,9 +61,11 @@ class PurchaseReturn {
               ]
             );
             
+            const purchaseReturnProductId = result.rows[0].id;
+            
             // Update product inventory (decrease stock) if status is 'confirmed' or 'completed'
             if (shouldUpdateInventory) {
-              const result = await client.query(
+              const productResult = await client.query(
                 `UPDATE public.products
                  SET quantity = quantity - $1
                  WHERE id = $2 AND user_id = $3
@@ -69,9 +73,19 @@ class PurchaseReturn {
                 [item.quantity, item.productId, userId]
               );
               
-              if (!result.rows.length) {
+              if (!productResult.rows.length) {
                 throw new Error(`No se pudo actualizar inventario para producto ${item.productId}`);
               }
+              
+              // Record inventory transaction for purchase return
+              await InventoryTransaction.recordTransaction(client, {
+                userId,
+                productId: item.productId,
+                quantity: -item.quantity, // Negative for returning to supplier
+                transactionTypeId: InventoryTransaction.TRANSACTION_TYPES.PURCHASE_RETURN,
+                salesOrderProductId: null,
+                purchaseOrderProductId: null
+              });
             }
           } catch (error) {
             // Handle unique constraint violation
@@ -175,6 +189,16 @@ class PurchaseReturn {
             `UPDATE public.products SET quantity = quantity + $1 WHERE id = $2 AND user_id = $3`,
             [item.quantity, item.product_id, userId]
           );
+          
+          // Record inventory transaction for adding items back
+          await InventoryTransaction.recordTransaction(client, {
+            userId,
+            productId: item.product_id,
+            quantity: item.quantity, // Positive for stock increase
+            transactionTypeId: InventoryTransaction.TRANSACTION_TYPES.ADJUSTMENT,
+            salesOrderProductId: null,
+            purchaseOrderProductId: null
+          });
         }
       }
       
@@ -215,13 +239,16 @@ class PurchaseReturn {
       if (items && items.length > 0) {
         for (const item of items) {
           try {
-            await client.query(
+            const result = await client.query(
               `INSERT INTO public.purchase_return_products(
                  purchase_return_id, product_id, quantity, status_id
                )
-               VALUES($1, $2, $3, $4)`,
+               VALUES($1, $2, $3, $4)
+               RETURNING id`,
               [id, item.productId, item.quantity, item.statusId || statusId]
             );
+            
+            const purchaseReturnProductId = result.rows[0].id;
             
             // Update inventory based on new status
             if (willBeConfirmed) {
@@ -235,6 +262,16 @@ class PurchaseReturn {
                     `UPDATE public.products SET quantity = quantity - $1 WHERE id = $2 AND user_id = $3`,
                     [quantityDifference, item.productId, userId]
                   );
+                  
+                  // Record inventory transaction for quantity difference
+                  await InventoryTransaction.recordTransaction(client, {
+                    userId,
+                    productId: item.productId,
+                    quantity: -quantityDifference, // Negative for decreasing stock
+                    transactionTypeId: InventoryTransaction.TRANSACTION_TYPES.PURCHASE_RETURN,
+                    salesOrderProductId: null,
+                    purchaseOrderProductId: null
+                  });
                 }
               } else {
                 // If changing from another status to confirmed, subtract full quantity
@@ -242,6 +279,16 @@ class PurchaseReturn {
                   `UPDATE public.products SET quantity = quantity - $1 WHERE id = $2 AND user_id = $3`,
                   [item.quantity, item.productId, userId]
                 );
+                
+                // Record inventory transaction for new confirmed return
+                await InventoryTransaction.recordTransaction(client, {
+                  userId,
+                  productId: item.productId,
+                  quantity: -item.quantity, // Negative for decreasing stock
+                  transactionTypeId: InventoryTransaction.TRANSACTION_TYPES.PURCHASE_RETURN,
+                  salesOrderProductId: null,
+                  purchaseOrderProductId: null
+                });
               }
             }
           } catch (error) {
@@ -289,6 +336,16 @@ class PurchaseReturn {
             `UPDATE public.products SET quantity = quantity + $1 WHERE id = $2 AND user_id = $3`,
             [quantity, product_id, userId]
           );
+          
+          // Record inventory transaction for adding items back to stock
+          await InventoryTransaction.recordTransaction(client, {
+            userId,
+            productId: product_id,
+            quantity: quantity, // Positive for stock increase
+            transactionTypeId: InventoryTransaction.TRANSACTION_TYPES.ADJUSTMENT,
+            salesOrderProductId: null,
+            purchaseOrderProductId: null
+          });
         }
       }
       

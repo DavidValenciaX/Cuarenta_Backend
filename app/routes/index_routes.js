@@ -1,16 +1,17 @@
 const express = require('express');
 
-const usersRoutes = require('./users_routes'); // Importar las rutas de usuarios
+const usersRoutes = require('./users_routes');
 const categoriesRoutes = require('./categories_routes');
 const suppliersRoutes = require('./suppliers_routes');
 const productsRoutes = require('./products_routes');
 const customersRoutes = require('./customers_routes');
 const salesOrdersRoutes = require('./sales_orders_routes');
-const salesReturnsRoutes = require('./sales_returns_routes'); // Nueva importación
+const salesReturnsRoutes = require('./sales_returns_routes');
 const purchaseOrdersRoutes = require('./purchase_orders_routes');
-const purchaseReturnsRoutes = require('./purchase_returns_routes'); // Nueva importación
+const purchaseReturnsRoutes = require('./purchase_returns_routes');
 const statusRoutes = require('./status_routes');
 const measurementsRoutes = require('./measurements_routes');
+const inventoryTransactionsRoutes = require('./inventory_transactions_routes');
 
 const router = express.Router();
 
@@ -21,10 +22,11 @@ router.use('/suppliers', suppliersRoutes);
 router.use('/products', productsRoutes);
 router.use('/customers', customersRoutes);
 router.use('/sales-orders', salesOrdersRoutes);
-router.use('/sales-returns', salesReturnsRoutes); // Nueva ruta
+router.use('/sales-returns', salesReturnsRoutes);
 router.use('/purchase-orders', purchaseOrdersRoutes);
-router.use('/purchase-returns', purchaseReturnsRoutes); // Nueva ruta
+router.use('/purchase-returns', purchaseReturnsRoutes);
 router.use('/status', statusRoutes);
 router.use('/measurements', measurementsRoutes);
+router.use('/inventory-transactions', inventoryTransactionsRoutes);
 
 module.exports = router;
