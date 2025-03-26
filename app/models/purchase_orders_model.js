@@ -31,6 +31,15 @@ class PurchaseOrder {
       
       const purchaseOrder = purchaseOrderResult.rows[0];
       
+      // Get the status name to determine if inventory should be updated
+      const statusResult = await client.query(
+        `SELECT name FROM public.status_types WHERE id = $1`,
+        [statusId]
+      );
+      
+      const statusName = statusResult.rows[0]?.name;
+      const shouldUpdateInventory = statusName === 'confirmed';
+      
       // Insert all the purchase order products
       if (items && items.length > 0) {
         for (const item of items) {
@@ -40,29 +49,31 @@ class PurchaseOrder {
             [purchaseOrder.id, item.productId, item.quantity, item.unitCost]
           );
           
-          // Update product quantity in inventory
-          const result = await client.query(
-            `UPDATE public.products
-             SET quantity = quantity + $1
-             WHERE id = $2 AND user_id = $3
-             RETURNING unit_cost`,
-            [item.quantity, item.productId, userId]
-          );
-          
-          if (!result.rows.length) {
-            throw new Error(`No se pudo actualizar inventario para producto ${item.productId}`);
-          }
-          
-          const currentUnitCost = result.rows[0].unit_cost;
-          
-          if (item.unitCost > currentUnitCost) {
-            // Update the unit cost for the product
-            await client.query(
+          // Update product quantity in inventory only if status is 'confirmed'
+          if (shouldUpdateInventory) {
+            const result = await client.query(
               `UPDATE public.products
-               SET unit_cost = $1
-               WHERE id = $2 AND user_id = $3`,
-              [item.unitCost, item.productId, userId]
+               SET quantity = quantity + $1
+               WHERE id = $2 AND user_id = $3
+               RETURNING unit_cost`,
+              [item.quantity, item.productId, userId]
             );
+            
+            if (!result.rows.length) {
+              throw new Error(`No se pudo actualizar inventario para producto ${item.productId}`);
+            }
+            
+            const currentUnitCost = result.rows[0].unit_cost;
+            
+            if (item.unitCost > currentUnitCost) {
+              // Update the unit cost for the product
+              await client.query(
+                `UPDATE public.products
+                 SET unit_cost = $1
+                 WHERE id = $2 AND user_id = $3`,
+                [item.unitCost, item.productId, userId]
+              );
+            }
           }
         }
       }
