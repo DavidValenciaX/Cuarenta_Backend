@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { createUser,confirmEmail,loginUser,logoutUser,forgotPassword,resetPassword } = require('../controllers/users_controller');
+const { createUser,confirmEmail,loginUser,logoutUser,forgotPassword,resetPassword,getUserProfile } = require('../controllers/users_controller');
 const { verificarToken } = require('../middlewares/auth_middleware'); // Importar middleware
 
 /**
@@ -297,5 +297,63 @@ router.get('/perfil', verificarToken, (req, res) => {
     res.json({ mensaje: 'Bienvenido, usuario autenticado', usuario: req.usuario });
   });
   
+/**
+ * @swagger
+ * /users/profile:
+ *   get:
+ *     summary: Obtener información del perfil de usuario
+ *     description: Obtiene la información del perfil del usuario autenticado
+ *     tags:
+ *       - Users
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Perfil de usuario obtenido exitosamente
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: 'success'
+ *                 message:
+ *                   type: string
+ *                   example: 'Perfil de usuario obtenido con éxito'
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: integer
+ *                       example: 1
+ *                     full_name:
+ *                       type: string
+ *                       example: 'Juan Pérez'
+ *                     company_name:
+ *                       type: string
+ *                       example: 'Empresa XYZ'
+ *                     email:
+ *                       type: string
+ *                       example: 'juan@correo.com'
+ *                     phone:
+ *                       type: string
+ *                       example: '3156789123'
+ *                     created_at:
+ *                       type: string
+ *                       format: date-time
+ *                       example: '2025-03-21T10:30:00-05:00'
+ *                     updated_at:
+ *                       type: string
+ *                       format: date-time
+ *                       example: '2025-03-21T10:30:00-05:00'
+ *       401:
+ *         description: Token inválido o expirado
+ *       404:
+ *         description: Usuario no encontrado
+ *       500:
+ *         description: Error interno del servidor
+ */
+router.get('/profile', verificarToken, getUserProfile);
 
 module.exports = router;

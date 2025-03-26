@@ -250,4 +250,21 @@ async function resetPassword(req, res) {
     }
   }
   
-module.exports = { createUser, confirmEmail, loginUser, logoutUser, forgotPassword, resetPassword };
+//Obtener perfil de usuario
+async function getUserProfile(req, res) {
+  try {
+    const userId = req.usuario.userId;
+    const user = await User.findById(userId);
+    
+    if (!user) {
+      return sendResponse(res, 404, 'error', 'Usuario no encontrado');
+    }
+    
+    return sendResponse(res, 200, 'success', 'Perfil de usuario obtenido con éxito', user);
+  } catch (error) {
+    console.error('Error in getUserProfile:', error);
+    return sendResponse(res, 500, 'error', 'Error interno del servidor');
+  }
+}
+
+module.exports = { createUser, confirmEmail, loginUser, logoutUser, forgotPassword, resetPassword, getUserProfile };
