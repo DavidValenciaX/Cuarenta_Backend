@@ -28,6 +28,7 @@ const swaggerOptions = {
       { name: 'Sales Orders', description: 'Gestión de órdenes de venta' },
       { name: 'Purchase Orders', description: 'Gestión de órdenes de compra' },
       { name: 'Sales Returns', description: 'Gestión de devoluciones de venta' },
+      { name: 'Purchase Returns', description: 'Gestión de devoluciones de compra' },
       { name: 'Status', description: 'Gestión de estados y categorías de estados' },
       { name: 'Measurements', description: 'Gestión de tipos de medidas y unidades de medida' }
     ],
