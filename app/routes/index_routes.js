@@ -6,9 +6,10 @@ const suppliersRoutes = require('./suppliers_routes');
 const productsRoutes = require('./products_routes');
 const customersRoutes = require('./customers_routes');
 const salesOrdersRoutes = require('./sales_orders_routes');
+const salesReturnsRoutes = require('./sales_returns_routes'); // Nueva importación
 const purchaseOrdersRoutes = require('./purchase_orders_routes');
 const statusRoutes = require('./status_routes');
-const measurementsRoutes = require('./measurements_routes'); // New import
+const measurementsRoutes = require('./measurements_routes');
 
 const router = express.Router();
 
@@ -19,8 +20,9 @@ router.use('/suppliers', suppliersRoutes);
 router.use('/products', productsRoutes);
 router.use('/customers', customersRoutes);
 router.use('/sales-orders', salesOrdersRoutes);
+router.use('/sales-returns', salesReturnsRoutes); // Nueva ruta
 router.use('/purchase-orders', purchaseOrdersRoutes);
 router.use('/status', statusRoutes);
-router.use('/measurements', measurementsRoutes); // New route
+router.use('/measurements', measurementsRoutes);
 
 module.exports = router;
