@@ -191,18 +191,34 @@ class PurchaseOrder {
   // Delete a purchase order and update inventory
   static async delete(id, userId) {
     return this.executeWithTransaction(async (client) => {
+      // Primero verificamos el estado de la orden de compra
+      const { rows: orderInfo } = await client.query(
+        `SELECT po.status_id, st.name as status_name 
+         FROM public.purchase_orders po
+         JOIN public.status_types st ON po.status_id = st.id
+         WHERE po.id = $1 AND po.user_id = $2`,
+        [id, userId]
+      );
+      
+      if (!orderInfo.length) {
+        return null; // La orden no existe o no pertenece al usuario
+      }
+      
       // Get all items from the purchase order
       const { rows: items } = await client.query(
         `SELECT product_id, quantity FROM public.purchase_order_products WHERE purchase_order_id = $1`,
         [id]
       );
       
-      // Update inventory for each product
-      for (const { product_id, quantity } of items) {
-        await client.query(
-          `UPDATE public.products SET quantity = quantity - $1 WHERE id = $2 AND user_id = $3`,
-          [quantity, product_id, userId]
-        );
+      // Solo actualizamos el inventario si la orden estaba confirmada
+      if (orderInfo[0].status_name === 'confirmed') {
+        // Update inventory for each product (decrease stock)
+        for (const { product_id, quantity } of items) {
+          await client.query(
+            `UPDATE public.products SET quantity = quantity - $1 WHERE id = $2 AND user_id = $3`,
+            [quantity, product_id, userId]
+          );
+        }
       }
       
       // Delete the purchase order (will cascade delete its products)

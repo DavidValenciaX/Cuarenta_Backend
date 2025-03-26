@@ -11,7 +11,7 @@ class User {
           FROM status_types st
           JOIN status_categories sc 
             ON st.category_id = sc.id
-          WHERE st.name = 'pending_confirmation'
+          WHERE st.name = 'pending'
             AND sc.name = 'user'
           LIMIT 1
         )
