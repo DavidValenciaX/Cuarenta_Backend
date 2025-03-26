@@ -31,6 +31,15 @@ class SalesOrder {
       
       const salesOrder = salesOrderResult.rows[0];
       
+      // Get the status name to determine if inventory should be updated
+      const statusResult = await client.query(
+        `SELECT name FROM public.status_types WHERE id = $1`,
+        [statusId]
+      );
+      
+      const statusName = statusResult.rows[0]?.name;
+      const shouldUpdateInventory = statusName === 'confirmed';
+      
       // Insert all the sales order products
       if (items && items.length > 0) {
         for (const item of items) {
@@ -40,17 +49,19 @@ class SalesOrder {
             [salesOrder.id, item.productId, item.quantity, item.unitPrice]
           );
           
-          // Update product inventory (decrease stock)
-          const result = await client.query(
-            `UPDATE public.products
-             SET quantity = quantity - $1
-             WHERE id = $2 AND user_id = $3
-             RETURNING quantity`,
-            [item.quantity, item.productId, userId]
-          );
-          
-          if (!result.rows.length) {
-            throw new Error(`No se pudo actualizar inventario para producto ${item.productId}`);
+          // Update product inventory (decrease stock) only if status is 'confirmed'
+          if (shouldUpdateInventory) {
+            const result = await client.query(
+              `UPDATE public.products
+               SET quantity = quantity - $1
+               WHERE id = $2 AND user_id = $3
+               RETURNING quantity`,
+              [item.quantity, item.productId, userId]
+            );
+            
+            if (!result.rows.length) {
+              throw new Error(`No se pudo actualizar inventario para producto ${item.productId}`);
+            }
           }
         }
       }
@@ -108,18 +119,41 @@ class SalesOrder {
         return null;
       }
 
+      // Get the old status name
+      const { rows: oldStatusInfo } = await client.query(
+        `SELECT name FROM public.status_types WHERE id = $1`,
+        [existingSalesOrder.status_id]
+      );
+      const oldStatusName = oldStatusInfo[0]?.name;
+
+      // Get the new status name
+      const { rows: newStatusInfo } = await client.query(
+        `SELECT name FROM public.status_types WHERE id = $1`,
+        [statusId]
+      );
+      const newStatusName = newStatusInfo[0]?.name;
+
       // Get existing items
       const { rows: oldItems } = await client.query(
         `SELECT product_id, quantity FROM public.sales_order_products WHERE sales_order_id = $1`,
         [id]
       );
       
-      // Revert inventory for old items (add back to inventory)
-      for (const item of oldItems) {
-        await client.query(
-          `UPDATE public.products SET quantity = quantity + $1 WHERE id = $2 AND user_id = $3`,
-          [item.quantity, item.product_id, userId]
-        );
+      // Create a mapping of old items by product_id for quick lookup
+      const oldItemsMap = {};
+      oldItems.forEach(item => {
+        oldItemsMap[item.product_id] = item.quantity;
+      });
+      
+      // Handle inventory changes based on status transition
+      if (oldStatusName === 'confirmed' && (newStatusName === 'pending' || newStatusName === 'cancelled')) {
+        // If changing from confirmed to pending/cancelled, add products back to inventory
+        for (const item of oldItems) {
+          await client.query(
+            `UPDATE public.products SET quantity = quantity + $1 WHERE id = $2 AND user_id = $3`,
+            [item.quantity, item.product_id, userId]
+          );
+        }
       }
       
       // Delete old items
@@ -164,11 +198,27 @@ class SalesOrder {
             [id, item.productId, item.quantity, item.unitPrice]
           );
           
-          // Update product quantity (decrease stock)
-          await client.query(
-            `UPDATE public.products SET quantity = quantity - $1 WHERE id = $2 AND user_id = $3`,
-            [item.quantity, item.productId, userId]
-          );
+          // Update inventory based on new status
+          if (newStatusName === 'confirmed') {
+            // If old status was also confirmed, only remove the difference from inventory
+            if (oldStatusName === 'confirmed') {
+              const oldQuantity = oldItemsMap[item.productId] || 0;
+              const quantityDifference = item.quantity - oldQuantity;
+              
+              if (quantityDifference !== 0) {
+                await client.query(
+                  `UPDATE public.products SET quantity = quantity - $1 WHERE id = $2 AND user_id = $3`,
+                  [quantityDifference, item.productId, userId]
+                );
+              }
+            } else {
+              // If changing from another status to confirmed, remove full quantity
+              await client.query(
+                `UPDATE public.products SET quantity = quantity - $1 WHERE id = $2 AND user_id = $3`,
+                [item.quantity, item.productId, userId]
+              );
+            }
+          }
         }
       }
       
@@ -179,10 +229,42 @@ class SalesOrder {
   // Delete a sales order and its products (leveraging CASCADE)
   static async delete(id, userId) {
     return this.executeWithTransaction(async (client) => {
+      // First check the status of the sales order
+      const { rows: orderInfo } = await client.query(
+        `SELECT so.status_id, st.name as status_name 
+         FROM public.sales_orders so
+         JOIN public.status_types st ON so.status_id = st.id
+         WHERE so.id = $1 AND so.user_id = $2`,
+        [id, userId]
+      );
+      
+      if (!orderInfo.length) {
+        return null; // Order doesn't exist or doesn't belong to user
+      }
+      
+      // Get all items from the sales order
+      const { rows: items } = await client.query(
+        `SELECT product_id, quantity FROM public.sales_order_products WHERE sales_order_id = $1`,
+        [id]
+      );
+      
+      // Only update inventory if the order was confirmed
+      if (orderInfo[0].status_name === 'confirmed') {
+        // Update inventory for each product (add back to stock)
+        for (const { product_id, quantity } of items) {
+          await client.query(
+            `UPDATE public.products SET quantity = quantity + $1 WHERE id = $2 AND user_id = $3`,
+            [quantity, product_id, userId]
+          );
+        }
+      }
+      
+      // Delete the sales order (will cascade delete its products)
       const { rows } = await client.query(
         `DELETE FROM public.sales_orders WHERE id = $1 AND user_id = $2 RETURNING *`,
         [id, userId]
       );
+      
       return rows[0];
     });
   }
