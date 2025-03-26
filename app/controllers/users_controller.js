@@ -142,14 +142,30 @@ async function confirmEmail(req, res) {
 //Cerrar sesion
 async function logoutUser(req, res) {
     try {
-      const token = req.headers['authorization'];
-      if (!token) {
+      const authHeader = req.headers['authorization'];
+      if (!authHeader) {
         return sendResponse(res, 400, 'error', 'Verificacion no aportada');
       }
-
-      addToBlacklist(token);
-  
-      return sendResponse(res, 200, 'success', 'Cierre de sesion exitoso');
+      
+      // Extract the token from the Authorization header
+      const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : authHeader;
+      
+      try {
+        // Decode the token to get user ID and expiration
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        const userId = decoded.userId;
+        
+        // Calculate expiration date from JWT
+        const expiresAt = new Date(decoded.exp * 1000); // Convert from seconds to milliseconds
+        
+        // Add to blacklist with user ID and expiration
+        await addToBlacklist(token, userId, expiresAt);
+        
+        return sendResponse(res, 200, 'success', 'Cierre de sesion exitoso');
+      } catch (jwtError) {
+        console.error('Invalid token:', jwtError);
+        return sendResponse(res, 401, 'error', 'Token inválido');
+      }
     } catch (error) {
       console.error('Error in logoutUser:', error);
       return sendResponse(res, 500, 'error', 'Error interno');
