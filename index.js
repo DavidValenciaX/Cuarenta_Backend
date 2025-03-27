@@ -5,7 +5,8 @@ const swaggerJsdoc = require('swagger-jsdoc');
 const swaggerUi = require('swagger-ui-express');
 
 const express = require('express');
-const routes = require('./app/routes/index_routes'); 
+const routes = require('./app/routes/index_routes');
+const os = require('os');
 
 const app = express();
 app.use(express.json());
@@ -46,6 +47,19 @@ const swaggerOptions = {
   apis: ['./app/routes/*.js'], 
 };
 
+function getServerIP() {
+  const interfaces = os.networkInterfaces();
+  for (const name of Object.keys(interfaces)) {
+    for (const net of interfaces[name]) {
+      // Solo IPs IPv4 que no sean internas
+      if (net.family === 'IPv4' && !net.internal) {
+        return net.address;
+      }
+    }
+  }
+  return 'localhost';
+}
+
 const swaggerSpec = swaggerJsdoc(swaggerOptions);
 // Montar Swagger UI
 app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
@@ -63,8 +77,8 @@ app.use(routes);
 // Definir el puerto desde las variables de entorno o usar 3000 por defecto
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-  console.log(`API: http://localhost:${PORT}`);
-  console.log(`Documentación: http://localhost:${PORT}/docs`);
+  const ip = getServerIP();
+  console.log(`Server running on http://${ip}:${PORT}`);
+  console.log(`Documentación: http://${ip}:${PORT}/docs`);
 
 });
