@@ -16,6 +16,7 @@
     "swagger-autogen": "^2.23.7"
   },
   "scripts": {
-    "dev": "nodemon index.js"
+    "dev": "nodemon index.js",
+    "start": "node index.js"
   }
 }
