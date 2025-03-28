@@ -76,7 +76,7 @@ class InventoryTransaction {
       `SELECT it.*, tt.name as transaction_type_name, p.name as product_name
        FROM public.inventory_transactions it
        JOIN public.transaction_types tt ON it.transaction_type_id = tt.id
-       JOIN public.products p ON it.product_id = p.id
+       LEFT JOIN public.products p ON it.product_id = p.id
        WHERE it.user_id = $1
        ORDER BY it.created_at DESC
        LIMIT $2 OFFSET $3`,

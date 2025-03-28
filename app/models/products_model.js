@@ -116,12 +116,21 @@ class Product {
       if (rows.length > 0 && oldQuantity !== newQuantity) {
         const quantityDifference = newQuantity - oldQuantity;
         
-        await InventoryTransaction.recordTransaction(client, {
-          userId,
-          productId: id,
-          quantity: quantityDifference,
-          transactionTypeId: InventoryTransaction.TRANSACTION_TYPES.ADJUSTMENT
-        });
+        // Directly insert the transaction record with the correct previous_stock and new_stock
+        await client.query(
+          `INSERT INTO public.inventory_transactions(
+            user_id, product_id, quantity, transaction_type_id, 
+            previous_stock, new_stock
+           ) VALUES($1, $2, $3, $4, $5, $6)`,
+          [
+            userId, 
+            id, 
+            quantityDifference, 
+            InventoryTransaction.TRANSACTION_TYPES.ADJUSTMENT,
+            oldQuantity,    // Previous stock is the old quantity
+            newQuantity     // New stock is the new quantity
+          ]
+        );
       }
       
       return rows[0];
