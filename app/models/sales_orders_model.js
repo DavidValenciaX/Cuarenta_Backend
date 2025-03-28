@@ -44,6 +44,12 @@ class SalesOrder {
       if (items && items.length > 0) {
         for (const item of items) {
 
+          await client.query(
+            `INSERT INTO public.sales_order_products(sales_order_id, product_id, quantity, unit_price)
+             VALUES ($1, $2, $3, $4)`,
+            [salesOrder.id, item.productId, item.quantity, item.unitPrice]
+          );
+
           if (shouldUpdateInventory) {
             const productResult = await client.query(
               `UPDATE public.products
@@ -192,6 +198,13 @@ class SalesOrder {
       // If items are provided, add new items and update inventory
       if (items && items.length > 0) {
         for (const item of items) {
+
+          await client.query(
+            `INSERT INTO public.sales_order_products(sales_order_id, product_id, quantity, unit_price)
+             VALUES ($1, $2, $3, $4)`,
+
+            [salesOrder.id, item.productId, item.quantity, item.unitPrice]
+          );
 
           // Update inventory based on new status
           if (newStatusName === 'confirmed') {

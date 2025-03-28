@@ -43,6 +43,12 @@ class PurchaseOrder {
       // Insert all the purchase order products
       if (items && items.length > 0) {
         for (const item of items) {
+          // Insert the purchase order product
+          await client.query(
+            `INSERT INTO public.purchase_order_products(purchase_order_id, product_id, quantity, unit_cost)
+              VALUES ($1, $2, $3, $4)`,
+            [purchaseOrder.id, item.productId, item.quantity, item.unitCost]
+          );
 
           // Update product quantity in inventory only if status is 'confirmed'
           if (shouldUpdateInventory) {
@@ -205,6 +211,13 @@ class PurchaseOrder {
       // If items are provided, add new items
       if (items && items.length > 0) {
         for (const item of items) {
+
+          // Insert the purchase order product
+          await client.query(
+            `INSERT INTO public.purchase_order_products(purchase_order_id, product_id, quantity, unit_cost)
+              VALUES ($1, $2, $3, $4)`,
+            [purchaseOrder.id, item.productId, item.quantity, item.unitCost]
+          );
           
           // Update inventory based on new status
           if (newStatusName === 'confirmed') {
