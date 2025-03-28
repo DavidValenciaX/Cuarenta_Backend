@@ -1,5 +1,4 @@
 const pool = require('../config/data_base');
-const InventoryTransaction = require('./inventory_transactions_model');
 
 class SalesOrder {
   // Utility method to execute operations within a transaction
@@ -59,13 +58,17 @@ class SalesOrder {
               throw new Error(`No se pudo actualizar inventario para producto ${item.productId}`);
             }
 
-            // Record the inventory transaction
-            await InventoryTransaction.recordTransaction(client, {
-              userId,
-              productId: item.productId,
-              quantity: -item.quantity, // Negative for sales (stock decrease)
-              transactionTypeId: InventoryTransaction.TRANSACTION_TYPES.CONFIRMED_SALES_ORDER
-            });
+            // Record the inventory transaction directly with SQL
+            const currentStock = productResult.rows[0].quantity;
+            const previousStock = currentStock + parseFloat(item.quantity);
+            
+            await client.query(
+              `INSERT INTO public.inventory_transactions(
+                user_id, product_id, quantity, transaction_type_id, 
+                previous_stock, new_stock
+              ) VALUES($1, $2, $3, $4, $5, $6)`,
+              [userId, item.productId, -item.quantity, 3, previousStock, currentStock]
+            );
           }
         }
       }
@@ -199,33 +202,41 @@ class SalesOrder {
               const quantityDifference = item.quantity - oldQuantity;
               
               if (quantityDifference !== 0) {
-                await client.query(
-                  `UPDATE public.products SET quantity = quantity - $1 WHERE id = $2 AND user_id = $3`,
+                const productResult = await client.query(
+                  `UPDATE public.products SET quantity = quantity - $1 WHERE id = $2 AND user_id = $3 RETURNING quantity`,
                   [quantityDifference, item.productId, userId]
                 );
+                
+                const currentStock = productResult.rows[0].quantity;
+                const previousStock = currentStock + parseFloat(quantityDifference);
 
-                // Record inventory transaction for the quantity difference
-                await InventoryTransaction.recordTransaction(client, {
-                  userId,
-                  productId: item.productId,
-                  quantity: -quantityDifference, // Negative for decreasing stock
-                  transactionTypeId: InventoryTransaction.TRANSACTION_TYPES.ADJUSTMENT
-                });
+                // Direct SQL insert for adjustment transaction
+                await client.query(
+                  `INSERT INTO public.inventory_transactions(
+                    user_id, product_id, quantity, transaction_type_id, 
+                    previous_stock, new_stock
+                  ) VALUES($1, $2, $3, $4, $5, $6)`,
+                  [userId, item.productId, -quantityDifference, 9, previousStock, currentStock]
+                );
               }
             } else {
               // If changing from another status to confirmed, remove full quantity
-              await client.query(
-                `UPDATE public.products SET quantity = quantity - $1 WHERE id = $2 AND user_id = $3`,
+              const productResult = await client.query(
+                `UPDATE public.products SET quantity = quantity - $1 WHERE id = $2 AND user_id = $3 RETURNING quantity`,
                 [item.quantity, item.productId, userId]
               );
+              
+              const currentStock = productResult.rows[0].quantity;
+              const previousStock = currentStock + parseFloat(item.quantity);
 
-              // Record inventory transaction for new confirmed order
-              await InventoryTransaction.recordTransaction(client, {
-                userId,
-                productId: item.productId,
-                quantity: -item.quantity, // Negative for decreasing stock
-                transactionTypeId: InventoryTransaction.TRANSACTION_TYPES.CONFIRMED_SALES_ORDER
-              });
+              // Direct SQL insert for confirmed sales order
+              await client.query(
+                `INSERT INTO public.inventory_transactions(
+                  user_id, product_id, quantity, transaction_type_id, 
+                  previous_stock, new_stock
+                ) VALUES($1, $2, $3, $4, $5, $6)`,
+                [userId, item.productId, -item.quantity, 3, previousStock, currentStock]
+              );
             }
           }
         }
@@ -261,18 +272,22 @@ class SalesOrder {
       if (orderInfo[0].status_name === 'confirmed') {
         // Update inventory for each product (add back to stock)
         for (const { product_id, quantity } of items) {
-          await client.query(
-            `UPDATE public.products SET quantity = quantity + $1 WHERE id = $2 AND user_id = $3`,
+          const productResult = await client.query(
+            `UPDATE public.products SET quantity = quantity + $1 WHERE id = $2 AND user_id = $3 RETURNING quantity`,
             [quantity, product_id, userId]
           );
+          
+          const currentStock = productResult.rows[0].quantity;
+          const previousStock = currentStock - parseFloat(quantity);
 
-          // Record inventory transaction for putting items back in stock
-          await InventoryTransaction.recordTransaction(client, {
-            userId,
-            productId: product_id,
-            quantity: quantity, // Positive for increasing stock
-            transactionTypeId: InventoryTransaction.TRANSACTION_TYPES.CANCELLED_SALES_ORDER
-          });
+          // Direct SQL insert for cancelled sales order
+          await client.query(
+            `INSERT INTO public.inventory_transactions(
+              user_id, product_id, quantity, transaction_type_id, 
+              previous_stock, new_stock
+            ) VALUES($1, $2, $3, $4, $5, $6)`,
+            [userId, product_id, quantity, 4, previousStock, currentStock]
+          );
         }
       }
       

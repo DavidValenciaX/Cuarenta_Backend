@@ -1,5 +1,4 @@
 const pool = require('../config/data_base');
-const InventoryTransaction = require('./inventory_transactions_model');
 
 class PurchaseOrder {
   // Utility method to execute operations within a transaction
@@ -51,7 +50,7 @@ class PurchaseOrder {
               `UPDATE public.products
                SET quantity = quantity + $1
                WHERE id = $2 AND user_id = $3
-               RETURNING unit_cost`,
+               RETURNING unit_cost, quantity`,
               [item.quantity, item.productId, userId]
             );
             
@@ -59,13 +58,17 @@ class PurchaseOrder {
               throw new Error(`No se pudo actualizar inventario para producto ${item.productId}`);
             }
             
-            // Record the inventory transaction
-            await InventoryTransaction.recordTransaction(client, {
-              userId,
-              productId: item.productId,
-              quantity: item.quantity, // Positive for purchases (stock increase)
-              transactionTypeId: InventoryTransaction.TRANSACTION_TYPES.CONFIRMED_PURCHASE_ORDER
-            });
+            // Direct SQL insert for confirmed purchase order
+            const currentStock = productResult.rows[0].quantity;
+            const previousStock = currentStock - parseFloat(item.quantity);
+            
+            await client.query(
+              `INSERT INTO public.inventory_transactions(
+                user_id, product_id, quantity, transaction_type_id, 
+                previous_stock, new_stock
+              ) VALUES($1, $2, $3, $4, $5, $6)`,
+              [userId, item.productId, item.quantity, 1, previousStock, currentStock]
+            );
             
             const currentUnitCost = productResult.rows[0].unit_cost;
             
@@ -211,33 +214,41 @@ class PurchaseOrder {
               const quantityDifference = item.quantity - oldQuantity;
               
               if (quantityDifference !== 0) {
-                await client.query(
-                  `UPDATE public.products SET quantity = quantity + $1 WHERE id = $2 AND user_id = $3`,
+                const productResult = await client.query(
+                  `UPDATE public.products SET quantity = quantity + $1 WHERE id = $2 AND user_id = $3 RETURNING quantity`,
                   [quantityDifference, item.productId, userId]
                 );
+                
+                const currentStock = productResult.rows[0].quantity;
+                const previousStock = currentStock - parseFloat(quantityDifference);
 
-                // Record inventory transaction for the quantity difference
-                await InventoryTransaction.recordTransaction(client, {
-                  userId,
-                  productId: item.productId,
-                  quantity: quantityDifference,
-                  transactionTypeId: InventoryTransaction.TRANSACTION_TYPES.ADJUSTMENT
-                });
+                // Direct SQL insert for adjustment transaction
+                await client.query(
+                  `INSERT INTO public.inventory_transactions(
+                    user_id, product_id, quantity, transaction_type_id, 
+                    previous_stock, new_stock
+                  ) VALUES($1, $2, $3, $4, $5, $6)`,
+                  [userId, item.productId, quantityDifference, 9, previousStock, currentStock]
+                );
               }
             } else {
               // If changing from another status to confirmed, add full quantity
-              await client.query(
-                `UPDATE public.products SET quantity = quantity + $1 WHERE id = $2 AND user_id = $3`,
+              const productResult = await client.query(
+                `UPDATE public.products SET quantity = quantity + $1 WHERE id = $2 AND user_id = $3 RETURNING quantity`,
                 [item.quantity, item.productId, userId]
               );
+              
+              const currentStock = productResult.rows[0].quantity;
+              const previousStock = currentStock - parseFloat(item.quantity);
 
-              // Record inventory transaction for new confirmed purchase
-              await InventoryTransaction.recordTransaction(client, {
-                userId,
-                productId: item.productId,
-                quantity: item.quantity, // Positive for increasing stock
-                transactionTypeId: InventoryTransaction.TRANSACTION_TYPES.CONFIRMED_PURCHASE_ORDER
-              });
+              // Direct SQL insert for confirmed purchase order
+              await client.query(
+                `INSERT INTO public.inventory_transactions(
+                  user_id, product_id, quantity, transaction_type_id, 
+                  previous_stock, new_stock
+                ) VALUES($1, $2, $3, $4, $5, $6)`,
+                [userId, item.productId, item.quantity, 1, previousStock, currentStock]
+              );
             }
             
             const { rows: productInfo } = await client.query(
@@ -285,18 +296,22 @@ class PurchaseOrder {
       if (orderInfo[0].status_name === 'confirmed') {
         // Update inventory for each product (decrease stock)
         for (const { product_id, quantity } of items) {
-          await client.query(
-            `UPDATE public.products SET quantity = quantity - $1 WHERE id = $2 AND user_id = $3`,
+          const productResult = await client.query(
+            `UPDATE public.products SET quantity = quantity - $1 WHERE id = $2 AND user_id = $3 RETURNING quantity`,
             [quantity, product_id, userId]
           );
+          
+          const currentStock = productResult.rows[0].quantity;
+          const previousStock = currentStock + parseFloat(quantity);
 
-          // Record inventory transaction for removing items from stock
-          await InventoryTransaction.recordTransaction(client, {
-            userId,
-            productId: product_id,
-            quantity: -quantity, // Negative for decreasing stock
-            transactionTypeId: InventoryTransaction.TRANSACTION_TYPES.CANCELLED_PURCHASE_ORDER
-          });
+          // Direct SQL insert for cancelled purchase order
+          await client.query(
+            `INSERT INTO public.inventory_transactions(
+              user_id, product_id, quantity, transaction_type_id, 
+              previous_stock, new_stock
+            ) VALUES($1, $2, $3, $4, $5, $6)`,
+            [userId, product_id, -quantity, 2, previousStock, currentStock]
+          );
         }
       }
       

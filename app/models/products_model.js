@@ -1,5 +1,4 @@
 const pool = require('../config/data_base');
-const InventoryTransaction = require('./inventory_transactions_model');
 
 class Product {
   
@@ -20,20 +19,13 @@ class Product {
       
       // Then record transaction BEFORE updating the quantity
       if (quantity > 0) {
-        // Record the transaction first with explicit previous_stock=0
+        // Record the transaction directly with explicit previous_stock=0
         await client.query(
           `INSERT INTO public.inventory_transactions(
             user_id, product_id, quantity, transaction_type_id, 
             previous_stock, new_stock
-           ) VALUES($1, $2, $3, $4, $5, $6)`,
-          [
-            userId, 
-            rows[0].id, 
-            quantity, 
-            InventoryTransaction.TRANSACTION_TYPES.ADJUSTMENT,
-            initialQuantity,  // Previous stock is 0
-            quantity          // New stock is the quantity
-          ]
+          ) VALUES($1, $2, $3, $4, $5, $6)`,
+          [userId, rows[0].id, quantity, 9, initialQuantity, quantity]
         );
         
         // Then update the quantity
@@ -116,20 +108,13 @@ class Product {
       if (rows.length > 0 && oldQuantity !== newQuantity) {
         const quantityDifference = newQuantity - oldQuantity;
         
-        // Directly insert the transaction record with the correct previous_stock and new_stock
+        // Directly insert the transaction record
         await client.query(
           `INSERT INTO public.inventory_transactions(
             user_id, product_id, quantity, transaction_type_id, 
             previous_stock, new_stock
-           ) VALUES($1, $2, $3, $4, $5, $6)`,
-          [
-            userId, 
-            id, 
-            quantityDifference, 
-            InventoryTransaction.TRANSACTION_TYPES.ADJUSTMENT,
-            oldQuantity,    // Previous stock is the old quantity
-            newQuantity     // New stock is the new quantity
-          ]
+          ) VALUES($1, $2, $3, $4, $5, $6)`,
+          [userId, id, quantityDifference, 9, oldQuantity, newQuantity]
         );
       }
       
@@ -187,17 +172,16 @@ class Product {
         return null;
       }
       
-      // Record inventory transaction
-      const transactionType = adjustmentQuantity < 0 
-        ? InventoryTransaction.TRANSACTION_TYPES.LOSS 
-        : InventoryTransaction.TRANSACTION_TYPES.ADJUSTMENT;
-        
-      await InventoryTransaction.recordTransaction(client, {
-        userId,
-        productId: id,
-        quantity: adjustmentQuantity,
-        transactionTypeId: transactionType
-      });
+      // Record inventory transaction directly
+      const transactionType = adjustmentQuantity < 0 ? 10 : 9; // 10=LOSS, 9=ADJUSTMENT
+      
+      await client.query(
+        `INSERT INTO public.inventory_transactions(
+          user_id, product_id, quantity, transaction_type_id, 
+          previous_stock, new_stock
+        ) VALUES($1, $2, $3, $4, $5, $6)`,
+        [userId, id, adjustmentQuantity, transactionType, previousStock, newStock]
+      );
       
       return rows[0];
     });

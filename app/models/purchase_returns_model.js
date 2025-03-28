@@ -1,5 +1,4 @@
 const pool = require('../config/data_base');
-const InventoryTransaction = require('./inventory_transactions_model');
 
 class PurchaseReturn {
   // Utility method to execute operations within a transaction
@@ -60,13 +59,17 @@ class PurchaseReturn {
               throw new Error(`No se pudo actualizar inventario para producto ${item.productId}`);
             }
             
-            // Record inventory transaction for purchase return
-            await InventoryTransaction.recordTransaction(client, {
-              userId,
-              productId: item.productId,
-              quantity: -item.quantity, // Negative for returning to supplier
-              transactionTypeId: InventoryTransaction.TRANSACTION_TYPES.PURCHASE_RETURN
-            });
+            // Direct SQL insert for purchase return transaction
+            const currentStock = productResult.rows[0].quantity;
+            const previousStock = currentStock + parseFloat(item.quantity);
+            
+            await client.query(
+              `INSERT INTO public.inventory_transactions(
+                user_id, product_id, quantity, transaction_type_id, 
+                previous_stock, new_stock
+              ) VALUES($1, $2, $3, $4, $5, $6)`,
+              [userId, item.productId, -item.quantity, 7, previousStock, currentStock]
+            );
           } catch (error) {
             // Handle unique constraint violation
             if (error.code === '23505') { // unique_violation PostgreSQL error code
@@ -145,18 +148,22 @@ class PurchaseReturn {
       // Since all returns are considered confirmed, we need to reverse previous inventory changes
       // before applying new ones
       for (const item of oldItems) {
-        await client.query(
-          `UPDATE public.products SET quantity = quantity + $1 WHERE id = $2 AND user_id = $3`,
+        const productResult = await client.query(
+          `UPDATE public.products SET quantity = quantity + $1 WHERE id = $2 AND user_id = $3 RETURNING quantity`,
           [item.quantity, item.product_id, userId]
         );
         
-        // Record inventory transaction for reversing returned items (adding back to inventory)
-        await InventoryTransaction.recordTransaction(client, {
-          userId,
-          productId: item.product_id,
-          quantity: item.quantity, // Positive for stock increase
-          transactionTypeId: InventoryTransaction.TRANSACTION_TYPES.ADJUSTMENT
-        });
+        const currentStock = productResult.rows[0].quantity;
+        const previousStock = currentStock - parseFloat(item.quantity);
+        
+        // Direct SQL insert for adjustment transaction
+        await client.query(
+          `INSERT INTO public.inventory_transactions(
+            user_id, product_id, quantity, transaction_type_id, 
+            previous_stock, new_stock
+          ) VALUES($1, $2, $3, $4, $5, $6)`,
+          [userId, item.product_id, item.quantity, 9, previousStock, currentStock]
+        );
       }
       
       // Delete old items
@@ -206,18 +213,22 @@ class PurchaseReturn {
             );
             
             // Always update inventory since all returns are confirmed
-            await client.query(
-              `UPDATE public.products SET quantity = quantity - $1 WHERE id = $2 AND user_id = $3`,
+            const productResult = await client.query(
+              `UPDATE public.products SET quantity = quantity - $1 WHERE id = $2 AND user_id = $3 RETURNING quantity`,
               [item.quantity, item.productId, userId]
             );
             
-            // Record inventory transaction for new purchase return
-            await InventoryTransaction.recordTransaction(client, {
-              userId,
-              productId: item.productId,
-              quantity: -item.quantity, // Negative for decrease in stock (returning to supplier)
-              transactionTypeId: InventoryTransaction.TRANSACTION_TYPES.PURCHASE_RETURN
-            });
+            const currentStock = productResult.rows[0].quantity;
+            const previousStock = currentStock + parseFloat(item.quantity);
+            
+            // Direct SQL insert for purchase return transaction
+            await client.query(
+              `INSERT INTO public.inventory_transactions(
+                user_id, product_id, quantity, transaction_type_id, 
+                previous_stock, new_stock
+              ) VALUES($1, $2, $3, $4, $5, $6)`,
+              [userId, item.productId, -item.quantity, 7, previousStock, currentStock]
+            );
           } catch (error) {
             // Handle unique constraint violation
             if (error.code === '23505') {
@@ -243,18 +254,22 @@ class PurchaseReturn {
       
       // Update inventory for each product (add back to stock) since all returns are confirmed
       for (const { product_id, quantity } of items) {
-        await client.query(
-          `UPDATE public.products SET quantity = quantity + $1 WHERE id = $2 AND user_id = $3`,
+        const productResult = await client.query(
+          `UPDATE public.products SET quantity = quantity + $1 WHERE id = $2 AND user_id = $3 RETURNING quantity`,
           [quantity, product_id, userId]
         );
         
-        // Record inventory transaction for adding items back to stock
-        await InventoryTransaction.recordTransaction(client, {
-          userId,
-          productId: product_id,
-          quantity: quantity, // Positive for stock increase
-          transactionTypeId: InventoryTransaction.TRANSACTION_TYPES.CANCELLED_PURCHASE_RETURN
-        });
+        const currentStock = productResult.rows[0].quantity;
+        const previousStock = currentStock - parseFloat(quantity);
+        
+        // Direct SQL insert for cancelled purchase return transaction
+        await client.query(
+          `INSERT INTO public.inventory_transactions(
+            user_id, product_id, quantity, transaction_type_id, 
+            previous_stock, new_stock
+          ) VALUES($1, $2, $3, $4, $5, $6)`,
+          [userId, product_id, quantity, 8, previousStock, currentStock]
+        );
       }
       
       // Delete the purchase return (will cascade delete its items)

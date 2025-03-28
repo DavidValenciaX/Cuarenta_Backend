@@ -15,54 +15,52 @@ class InventoryTransaction {
     LOSS: 10,
   };
 
-  // Record an inventory transaction
-  static async recordTransaction(client, {
-    userId,
-    productId,
-    quantity,
-    transactionTypeId,
-  }) {
-    // Get the current stock level
-    const { rows: productRows } = await client.query(
-      `SELECT quantity FROM public.products WHERE id = $1`,
-      [productId]
-    );
+  // Record an inventory transaction with correct previous and new stock values
+  static async recordTransaction(client, data) {
+    const { userId, productId, quantity, transactionTypeId, previousStock: providedPreviousStock, newStock: providedNewStock } = data;
     
-    if (!productRows.length) {
-      throw new Error(`Product with ID ${productId} not found`);
+    let previousStock, newStock;
+    
+    // If previousStock and newStock are provided, use them
+    if (providedPreviousStock !== undefined && providedNewStock !== undefined) {
+      previousStock = providedPreviousStock;
+      newStock = providedNewStock;
+    } else {
+      // Otherwise query the current stock level from products table
+      const { rows } = await client.query(
+        `SELECT quantity FROM public.products WHERE id = $1 AND user_id = $2`,
+        [productId, userId]
+      );
+      
+      if (rows.length === 0) {
+        throw new Error(`Product with ID ${productId} not found`);
+      }
+      
+      // Get the current stock level
+      previousStock = parseFloat(rows[0].quantity);
+      
+      // Calculate the new stock level
+      newStock = previousStock + parseFloat(quantity);
     }
     
-    const previousStock = parseFloat(productRows[0].quantity);
-    const numericQuantity = parseFloat(quantity);
-    const newStock = previousStock + numericQuantity;
-    
-    // Record the transaction
-    const { rows } = await client.query(
+    // Insert the transaction with accurate stock levels
+    const result = await client.query(
       `INSERT INTO public.inventory_transactions(
-        user_id, product_id, quantity, transaction_type_id,
+        user_id, product_id, quantity, transaction_type_id, 
         previous_stock, new_stock
-      )
-      VALUES($1, $2, $3, $4, $5, $6)
-      RETURNING *`,
-      [
-        userId,
-        productId,
-        numericQuantity,
-        transactionTypeId,
-        previousStock,
-        newStock
-      ]
+      ) VALUES($1, $2, $3, $4, $5, $6) RETURNING *`,
+      [userId, productId, quantity, transactionTypeId, previousStock, newStock]
     );
     
-    return rows[0];
+    return result.rows[0];
   }
 
-  // Get transaction history for a product
-  static async getProductTransactions(productId, userId) {
+  static async getTransactionHistoryByProduct(productId, userId) {
     const { rows } = await pool.query(
-      `SELECT it.*, tt.name as transaction_type_name
+      `SELECT it.*, tt.name as transaction_type_name, p.name as product_name
        FROM public.inventory_transactions it
        JOIN public.transaction_types tt ON it.transaction_type_id = tt.id
+       JOIN public.products p ON it.product_id = p.id
        WHERE it.product_id = $1 AND it.user_id = $2
        ORDER BY it.created_at DESC`,
       [productId, userId]
@@ -70,13 +68,25 @@ class InventoryTransaction {
     return rows;
   }
 
-  // Get all transactions for a user
-  static async getUserTransactions(userId, limit = 100, offset = 0) {
+  static async getTransactionHistory(userId) {
     const { rows } = await pool.query(
       `SELECT it.*, tt.name as transaction_type_name, p.name as product_name
        FROM public.inventory_transactions it
        JOIN public.transaction_types tt ON it.transaction_type_id = tt.id
-       LEFT JOIN public.products p ON it.product_id = p.id
+       JOIN public.products p ON it.product_id = p.id
+       WHERE it.user_id = $1
+       ORDER BY it.created_at DESC`,
+      [userId]
+    );
+    return rows;
+  }
+
+  static async getUserTransactions(userId, limit, offset) {
+    const { rows } = await pool.query(
+      `SELECT it.*, tt.name as transaction_type_name, p.name as product_name
+       FROM public.inventory_transactions it
+       JOIN public.transaction_types tt ON it.transaction_type_id = tt.id
+       JOIN public.products p ON it.product_id = p.id
        WHERE it.user_id = $1
        ORDER BY it.created_at DESC
        LIMIT $2 OFFSET $3`,
