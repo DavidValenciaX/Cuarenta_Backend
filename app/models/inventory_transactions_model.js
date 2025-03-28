@@ -8,7 +8,9 @@ class InventoryTransaction {
     CONFIRMED_SALE_RETURN: 3,
     CONFIRMED_PURCHASE_RETURN: 4,
     ADJUSTMENT: 5,
-    LOSS: 6
+    LOSS: 6,
+    CANCELLED_PURCHASE_ORDER: 7,
+    CANCELLED_SALES_ORDER: 8
   };
 
   // Record an inventory transaction

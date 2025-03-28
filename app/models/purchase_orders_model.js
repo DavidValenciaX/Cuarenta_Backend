@@ -149,6 +149,11 @@ class PurchaseOrder {
       );
       const newStatusName = newStatusInfo[0]?.name;
 
+      // Prevent changing from confirmed to pending
+      if (oldStatusName === 'confirmed' && newStatusName === 'pending') {
+        throw new Error('No se puede cambiar una orden de compra de "confirmada" a "pendiente"');
+      }
+
       // Get existing items
       const { rows: oldItems } = await client.query(
         `SELECT product_id, quantity FROM public.purchase_order_products WHERE purchase_order_id = $1`,
@@ -160,25 +165,6 @@ class PurchaseOrder {
       oldItems.forEach(item => {
         oldItemsMap[item.product_id] = item.quantity;
       });
-      
-      // Handle inventory changes based on status transition
-      if (oldStatusName === 'confirmed' && newStatusName === 'pending') {
-        // If changing from confirmed to pending, subtract products from inventory
-        for (const item of oldItems) {
-          await client.query(
-            `UPDATE public.products SET quantity = quantity - $1 WHERE id = $2 AND user_id = $3`,
-            [item.quantity, item.product_id, userId]
-          );
-
-          // Record inventory transaction for removing items from stock
-          await InventoryTransaction.recordTransaction(client, {
-            userId,
-            productId: item.product_id,
-            quantity: -item.quantity, // Negative for decreasing stock
-            transactionTypeId: InventoryTransaction.TRANSACTION_TYPES.ADJUSTMENT
-          });
-        }
-      }
       
       // Delete old items
       await client.query(
@@ -235,7 +221,7 @@ class PurchaseOrder {
                   userId,
                   productId: item.productId,
                   quantity: quantityDifference,
-                  transactionTypeId: InventoryTransaction.TRANSACTION_TYPES.CONFIRMED_PURCHASE_ORDER
+                  transactionTypeId: InventoryTransaction.TRANSACTION_TYPES.ADJUSTMENT
                 });
               }
             } else {
@@ -309,7 +295,7 @@ class PurchaseOrder {
             userId,
             productId: product_id,
             quantity: -quantity, // Negative for decreasing stock
-            transactionTypeId: InventoryTransaction.TRANSACTION_TYPES.ADJUSTMENT
+            transactionTypeId: InventoryTransaction.TRANSACTION_TYPES.CANCELLED_PURCHASE_ORDER
           });
         }
       }
