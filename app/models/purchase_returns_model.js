@@ -142,6 +142,23 @@ class PurchaseReturn {
         oldItemsMap[item.product_id] = item.quantity;
       });
       
+      // Since all returns are considered confirmed, we need to reverse previous inventory changes
+      // before applying new ones
+      for (const item of oldItems) {
+        await client.query(
+          `UPDATE public.products SET quantity = quantity + $1 WHERE id = $2 AND user_id = $3`,
+          [item.quantity, item.product_id, userId]
+        );
+        
+        // Record inventory transaction for reversing returned items (adding back to inventory)
+        await InventoryTransaction.recordTransaction(client, {
+          userId,
+          productId: item.product_id,
+          quantity: item.quantity, // Positive for stock increase
+          transactionTypeId: InventoryTransaction.TRANSACTION_TYPES.ADJUSTMENT
+        });
+      }
+      
       // Delete old items
       await client.query(
         `DELETE FROM public.purchase_return_products WHERE purchase_return_id = $1`,
@@ -175,7 +192,7 @@ class PurchaseReturn {
       
       const purchaseReturn = purchaseReturnResult.rows[0];
       
-      // If items are provided, add new items and update inventory
+      // Add new items and update inventory
       if (items && items.length > 0) {
         for (const item of items) {
           try {
@@ -188,24 +205,19 @@ class PurchaseReturn {
               [id, item.productId, item.quantity, item.statusId]
             );
             
-            // Calculate inventory adjustment needed
-            const oldQuantity = oldItemsMap[item.productId] || 0;
-            const quantityDifference = item.quantity - oldQuantity;
+            // Always update inventory since all returns are confirmed
+            await client.query(
+              `UPDATE public.products SET quantity = quantity - $1 WHERE id = $2 AND user_id = $3`,
+              [item.quantity, item.productId, userId]
+            );
             
-            if (quantityDifference !== 0) {
-              await client.query(
-                `UPDATE public.products SET quantity = quantity - $1 WHERE id = $2 AND user_id = $3`,
-                [quantityDifference, item.productId, userId]
-              );
-              
-              // Record inventory transaction for quantity difference
-              await InventoryTransaction.recordTransaction(client, {
-                userId,
-                productId: item.productId,
-                quantity: -quantityDifference, // Negative for decreasing stock
-                transactionTypeId: InventoryTransaction.TRANSACTION_TYPES.ADJUSTMENT
-              });
-            }
+            // Record inventory transaction for new purchase return
+            await InventoryTransaction.recordTransaction(client, {
+              userId,
+              productId: item.productId,
+              quantity: -item.quantity, // Negative for decrease in stock (returning to supplier)
+              transactionTypeId: InventoryTransaction.TRANSACTION_TYPES.PURCHASE_RETURN
+            });
           } catch (error) {
             // Handle unique constraint violation
             if (error.code === '23505') {
