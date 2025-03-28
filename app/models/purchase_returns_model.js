@@ -19,57 +19,54 @@ class PurchaseReturn {
   }
 
   // Create a purchase return with its items
-  static async create({ userId, purchaseOrderId, statusId, notes, returnDate, items }) {
+  static async create({ userId, purchaseOrderId, notes, returnDate, items }) {
     return this.executeWithTransaction(async (client) => {
       // Insert the purchase return record
       const purchaseReturnResult = await client.query(
         `INSERT INTO public.purchase_returns(
-           user_id, purchase_order_id, status_id, 
+           user_id, purchase_order_id,
            return_date, notes
          )
-         VALUES ($1, $2, $3, COALESCE($4, NOW()), $5)
+         VALUES ($1, $2, COALESCE($3, NOW()), $4)
          RETURNING *`,
-        [userId, purchaseOrderId, statusId, returnDate, notes]
+        [userId, purchaseOrderId, returnDate, notes]
       );
       
       const purchaseReturn = purchaseReturnResult.rows[0];
-      
-      // Get the status name to determine if inventory should be updated
-      const statusResult = await client.query(
-        `SELECT name FROM public.status_types WHERE id = $1`,
-        [statusId]
-      );
-      
-      const statusName = statusResult.rows[0]?.name;
-      const shouldUpdateInventory = statusName === 'confirmed';
       
       // Insert all the purchase return products
       if (items && items.length > 0) {
         for (const item of items) {
           try {
+            // Insert the purchase return product record with its status
+            await client.query(
+              `INSERT INTO public.purchase_return_products(
+                purchase_return_id, product_id, quantity, status_id
+              )
+              VALUES ($1, $2, $3, $4)`,
+              [purchaseReturn.id, item.productId, item.quantity, item.statusId]
+            );
 
-            // Update product inventory (decrease stock) if status is 'confirmed' or 'completed'
-            if (shouldUpdateInventory) {
-              const productResult = await client.query(
-                `UPDATE public.products
-                 SET quantity = quantity - $1
-                 WHERE id = $2 AND user_id = $3
-                 RETURNING quantity`,
-                [item.quantity, item.productId, userId]
-              );
-              
-              if (!productResult.rows.length) {
-                throw new Error(`No se pudo actualizar inventario para producto ${item.productId}`);
-              }
-              
-              // Record inventory transaction for purchase return
-              await InventoryTransaction.recordTransaction(client, {
-                userId,
-                productId: item.productId,
-                quantity: -item.quantity, // Negative for returning to supplier
-                transactionTypeId: InventoryTransaction.TRANSACTION_TYPES.CONFIRMED_PURCHASE_RETURN
-              });
+            // Always update product inventory (decrease stock)
+            const productResult = await client.query(
+              `UPDATE public.products
+               SET quantity = quantity - $1
+               WHERE id = $2 AND user_id = $3
+               RETURNING quantity`,
+              [item.quantity, item.productId, userId]
+            );
+            
+            if (!productResult.rows.length) {
+              throw new Error(`No se pudo actualizar inventario para producto ${item.productId}`);
             }
+            
+            // Record inventory transaction for purchase return
+            await InventoryTransaction.recordTransaction(client, {
+              userId,
+              productId: item.productId,
+              quantity: -item.quantity, // Negative for returning to supplier
+              transactionTypeId: InventoryTransaction.TRANSACTION_TYPES.PURCHASE_RETURN
+            });
           } catch (error) {
             // Handle unique constraint violation
             if (error.code === '23505') { // unique_violation PostgreSQL error code
@@ -87,10 +84,9 @@ class PurchaseReturn {
   // Find all purchase returns for a user
   static async findAllByUser(userId) {
     const { rows } = await pool.query(
-      `SELECT pr.*, po.id as purchase_order_id, st.name as status_name
+      `SELECT pr.*, po.id as purchase_order_id
        FROM public.purchase_returns pr
        JOIN public.purchase_orders po ON pr.purchase_order_id = po.id
-       JOIN public.status_types st ON pr.status_id = st.id
        WHERE pr.user_id = $1 
        ORDER BY pr.return_date DESC`,
       [userId]
@@ -101,10 +97,9 @@ class PurchaseReturn {
   // Find a purchase return by ID
   static async findById(id, userId) {
     const { rows } = await pool.query(
-      `SELECT pr.*, po.id as purchase_order_id, st.name as status_name
+      `SELECT pr.*, po.id as purchase_order_id
        FROM public.purchase_returns pr
        JOIN public.purchase_orders po ON pr.purchase_order_id = po.id
-       JOIN public.status_types st ON pr.status_id = st.id
        WHERE pr.id = $1 AND pr.user_id = $2`,
       [id, userId]
     );
@@ -127,27 +122,13 @@ class PurchaseReturn {
   }
 
   // Update a purchase return
-  static async update(id, { purchaseOrderId, statusId, notes, returnDate, items }, userId) {
+  static async update(id, { purchaseOrderId, notes, returnDate, items }, userId) {
     return this.executeWithTransaction(async (client) => {
       // Verify the purchase return exists and belongs to user
       const existingPurchaseReturn = await this.findById(id, userId);
       if (!existingPurchaseReturn) {
         return null;
       }
-
-      // Get the old status name
-      const { rows: oldStatusInfo } = await client.query(
-        `SELECT name FROM public.status_types WHERE id = $1`,
-        [existingPurchaseReturn.status_id]
-      );
-      const oldStatusName = oldStatusInfo[0]?.name;
-
-      // Get the new status name
-      const { rows: newStatusInfo } = await client.query(
-        `SELECT name FROM public.status_types WHERE id = $1`,
-        [statusId]
-      );
-      const newStatusName = newStatusInfo[0]?.name;
 
       // Get existing items
       const { rows: oldItems } = await client.query(
@@ -161,28 +142,6 @@ class PurchaseReturn {
         oldItemsMap[item.product_id] = item.quantity;
       });
       
-      // Handle inventory changes based on status transition
-      const wasConfirmed = oldStatusName === 'confirmed' || oldStatusName === 'completed';
-      const willBeConfirmed = newStatusName === 'confirmed' || newStatusName === 'completed';
-      
-      if (wasConfirmed && !willBeConfirmed) {
-        // If changing from confirmed/completed to another status, add products back to inventory
-        for (const item of oldItems) {
-          await client.query(
-            `UPDATE public.products SET quantity = quantity + $1 WHERE id = $2 AND user_id = $3`,
-            [item.quantity, item.product_id, userId]
-          );
-          
-          // Record inventory transaction for adding items back
-          await InventoryTransaction.recordTransaction(client, {
-            userId,
-            productId: item.product_id,
-            quantity: item.quantity, // Positive for stock increase
-            transactionTypeId: InventoryTransaction.TRANSACTION_TYPES.ADJUSTMENT
-          });
-        }
-      }
-      
       // Delete old items
       await client.query(
         `DELETE FROM public.purchase_return_products WHERE purchase_return_id = $1`,
@@ -192,11 +151,11 @@ class PurchaseReturn {
       // Build the update query
       let updateQuery = `
         UPDATE public.purchase_returns
-        SET purchase_order_id = $1, status_id = $2, notes = $3
+        SET purchase_order_id = $1, notes = $2
       `;
       
-      const queryParams = [purchaseOrderId, statusId, notes];
-      let paramIndex = 4;
+      const queryParams = [purchaseOrderId, notes];
+      let paramIndex = 3;
       
       // Add returnDate to the query if provided
       if (returnDate) {
@@ -220,43 +179,32 @@ class PurchaseReturn {
       if (items && items.length > 0) {
         for (const item of items) {
           try {
-                     
-            // Update inventory based on new status
-            if (willBeConfirmed) {
-              if (wasConfirmed) {
-                // If old status was also confirmed, only subtract the difference from inventory
-                const oldQuantity = oldItemsMap[item.productId] || 0;
-                const quantityDifference = item.quantity - oldQuantity;
-                
-                if (quantityDifference !== 0) {
-                  await client.query(
-                    `UPDATE public.products SET quantity = quantity - $1 WHERE id = $2 AND user_id = $3`,
-                    [quantityDifference, item.productId, userId]
-                  );
-                  
-                  // Record inventory transaction for quantity difference
-                  await InventoryTransaction.recordTransaction(client, {
-                    userId,
-                    productId: item.productId,
-                    quantity: -quantityDifference, // Negative for decreasing stock
-                    transactionTypeId: InventoryTransaction.TRANSACTION_TYPES.CONFIRMED_PURCHASE_RETURN
-                  });
-                }
-              } else {
-                // If changing from another status to confirmed, subtract full quantity
-                await client.query(
-                  `UPDATE public.products SET quantity = quantity - $1 WHERE id = $2 AND user_id = $3`,
-                  [item.quantity, item.productId, userId]
-                );
-                
-                // Record inventory transaction for new confirmed return
-                await InventoryTransaction.recordTransaction(client, {
-                  userId,
-                  productId: item.productId,
-                  quantity: -item.quantity, // Negative for decreasing stock
-                  transactionTypeId: InventoryTransaction.TRANSACTION_TYPES.CONFIRMED_PURCHASE_RETURN
-                });
-              }
+            // Insert the purchase return product with its status
+            await client.query(
+              `INSERT INTO public.purchase_return_products(
+                purchase_return_id, product_id, quantity, status_id
+              )
+              VALUES ($1, $2, $3, $4)`,
+              [id, item.productId, item.quantity, item.statusId]
+            );
+            
+            // Calculate inventory adjustment needed
+            const oldQuantity = oldItemsMap[item.productId] || 0;
+            const quantityDifference = item.quantity - oldQuantity;
+            
+            if (quantityDifference !== 0) {
+              await client.query(
+                `UPDATE public.products SET quantity = quantity - $1 WHERE id = $2 AND user_id = $3`,
+                [quantityDifference, item.productId, userId]
+              );
+              
+              // Record inventory transaction for quantity difference
+              await InventoryTransaction.recordTransaction(client, {
+                userId,
+                productId: item.productId,
+                quantity: -quantityDifference, // Negative for decreasing stock
+                transactionTypeId: InventoryTransaction.TRANSACTION_TYPES.ADJUSTMENT
+              });
             }
           } catch (error) {
             // Handle unique constraint violation
@@ -275,43 +223,26 @@ class PurchaseReturn {
   // Delete a purchase return
   static async delete(id, userId) {
     return this.executeWithTransaction(async (client) => {
-      // First check the status of the purchase return
-      const { rows: returnInfo } = await client.query(
-        `SELECT pr.status_id, st.name as status_name 
-         FROM public.purchase_returns pr
-         JOIN public.status_types st ON pr.status_id = st.id
-         WHERE pr.id = $1 AND pr.user_id = $2`,
-        [id, userId]
-      );
-      
-      if (!returnInfo.length) {
-        return null; // Return doesn't exist or doesn't belong to user
-      }
-      
       // Get all items from the purchase return
       const { rows: items } = await client.query(
         `SELECT product_id, quantity FROM public.purchase_return_products WHERE purchase_return_id = $1`,
         [id]
       );
       
-      // Only update inventory if the return was confirmed or completed
-      const statusName = returnInfo[0].status_name;
-      if (statusName === 'confirmed') {
-        // Update inventory for each product (add back to stock)
-        for (const { product_id, quantity } of items) {
-          await client.query(
-            `UPDATE public.products SET quantity = quantity + $1 WHERE id = $2 AND user_id = $3`,
-            [quantity, product_id, userId]
-          );
-          
-          // Record inventory transaction for adding items back to stock
-          await InventoryTransaction.recordTransaction(client, {
-            userId,
-            productId: product_id,
-            quantity: quantity, // Positive for stock increase
-            transactionTypeId: InventoryTransaction.TRANSACTION_TYPES.ADJUSTMENT
-          });
-        }
+      // Update inventory for each product (add back to stock) since all returns are confirmed
+      for (const { product_id, quantity } of items) {
+        await client.query(
+          `UPDATE public.products SET quantity = quantity + $1 WHERE id = $2 AND user_id = $3`,
+          [quantity, product_id, userId]
+        );
+        
+        // Record inventory transaction for adding items back to stock
+        await InventoryTransaction.recordTransaction(client, {
+          userId,
+          productId: product_id,
+          quantity: quantity, // Positive for stock increase
+          transactionTypeId: InventoryTransaction.TRANSACTION_TYPES.CANCELLED_PURCHASE_RETURN
+        });
       }
       
       // Delete the purchase return (will cascade delete its items)

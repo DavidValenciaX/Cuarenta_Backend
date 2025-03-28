@@ -4,13 +4,15 @@ class InventoryTransaction {
   // Transaction types constants (matching IDs in the database)
   static TRANSACTION_TYPES = {
     CONFIRMED_PURCHASE_ORDER: 1,
-    CONFIRMED_SALES_ORDER: 2,
-    CONFIRMED_SALE_RETURN: 3,
-    CONFIRMED_PURCHASE_RETURN: 4,
-    ADJUSTMENT: 5,
-    LOSS: 6,
-    CANCELLED_PURCHASE_ORDER: 7,
-    CANCELLED_SALES_ORDER: 8
+    CANCELLED_PURCHASE_ORDER: 2,
+    CONFIRMED_SALES_ORDER: 3,
+    CANCELLED_SALES_ORDER: 4,
+    SALE_RETURN: 5,
+    CANCELLED_SALE_RETURN: 6,
+    PURCHASE_RETURN: 7,
+    CANCELLED_PURCHASE_RETURN: 8,
+    ADJUSTMENT: 9,
+    LOSS: 10,
   };
 
   // Record an inventory transaction

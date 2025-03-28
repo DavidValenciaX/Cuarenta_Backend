@@ -34,17 +34,12 @@ router.use(verificarToken);
  *             type: object
  *             required:
  *               - purchaseOrderId
- *               - statusId
  *               - items
  *             properties:
  *               purchaseOrderId:
  *                 type: integer
  *                 example: 1
  *                 description: ID de la orden de compra original
- *               statusId:
- *                 type: integer
- *                 description: Estado de la devolución
- *                 example: 1
  *               returnDate:
  *                 type: string
  *                 format: date-time
@@ -73,7 +68,7 @@ router.use(verificarToken);
  *                     statusId:
  *                       type: integer
  *                       example: 1
- *                       description: Estado específico para este producto (opcional)
+ *                       description: Estado específico para este producto
  *     responses:
  *       201:
  *         description: Devolución de compra creada exitosamente
@@ -152,15 +147,11 @@ router.get('/:id', getPurchaseReturn);
  *             type: object
  *             required:
  *               - purchaseOrderId
- *               - statusId
  *               - items
  *             properties:
  *               purchaseOrderId:
  *                 type: integer
  *                 example: 1
- *               statusId:
- *                 type: integer
- *                 example: 2
  *               notes:
  *                 type: string
  *                 example: "Productos en mal estado"

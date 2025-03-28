@@ -13,11 +13,11 @@ function toNumber(value) {
 async function createPurchaseReturn(req, res) {
   try {
     const userId = req.usuario.userId;
-    const { purchaseOrderId, statusId, returnDate, notes, items } = req.body;
+    const { purchaseOrderId, returnDate, notes, items } = req.body;
 
     // Validate required fields
-    if (!purchaseOrderId || statusId == null || !Array.isArray(items) || items.length === 0) {
-      return sendResponse(res, 400, 'error', 'Orden de compra, estado y al menos un producto son requeridos');
+    if (!purchaseOrderId || !Array.isArray(items) || items.length === 0) {
+      return sendResponse(res, 400, 'error', 'Orden de compra y al menos un producto son requeridos');
     }
     
     // Validate purchase order
@@ -42,14 +42,14 @@ async function createPurchaseReturn(req, res) {
       }
       
       // Check if there's enough inventory to return
-      if (product.quantity < qty && (statusId === 1 || statusId === 2)) { // Assuming 1, 2 are confirmed/completed statuses
+      if (product.quantity < qty) {
         return sendResponse(res, 400, 'error', `Inventario insuficiente para el producto ${product.name}`);
       }
       
       validatedItems.push({
         productId: item.productId,
         quantity: qty,
-        statusId: item.statusId || statusId
+        statusId: item.statusId
       });
     }
 
@@ -57,7 +57,6 @@ async function createPurchaseReturn(req, res) {
     const purchaseReturn = await PurchaseReturn.create({
       userId,
       purchaseOrderId,
-      statusId,
       notes,
       returnDate,
       items: validatedItems
@@ -114,11 +113,11 @@ async function updatePurchaseReturn(req, res) {
   try {
     const userId = req.usuario.userId;
     const purchaseReturnId = req.params.id;
-    const { purchaseOrderId, statusId, returnDate, notes, items } = req.body;
+    const { purchaseOrderId, returnDate, notes, items } = req.body;
 
     // Validate required fields
-    if (!purchaseOrderId || statusId == null || !Array.isArray(items) || items.length === 0) {
-      return sendResponse(res, 400, 'error', 'Orden de compra, estado y al menos un producto son requeridos');
+    if (!purchaseOrderId || !Array.isArray(items) || items.length === 0) {
+      return sendResponse(res, 400, 'error', 'Orden de compra y al menos un producto son requeridos');
     }
 
     // Validate purchase order belongs to user
@@ -151,14 +150,13 @@ async function updatePurchaseReturn(req, res) {
       validatedItems.push({
         productId: item.productId,
         quantity: qty,
-        statusId: item.statusId || statusId
+        statusId: item.statusId
       });
     }
 
     // Update the purchase return
     const updated = await PurchaseReturn.update(purchaseReturnId, {
       purchaseOrderId,
-      statusId,
       notes,
       returnDate,
       items: validatedItems
