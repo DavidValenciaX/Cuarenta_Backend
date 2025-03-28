@@ -136,6 +136,11 @@ class SalesOrder {
         [statusId]
       );
       const newStatusName = newStatusInfo[0]?.name;
+      
+      // Prevent changing from confirmed to any other status
+      if (oldStatusName === 'confirmed' && newStatusName !== 'pending') {
+        throw new Error('No se puede cambiar una orden de venta de "confirmado" a "pendiente".');
+      }
 
       // Get existing items
       const { rows: oldItems } = await client.query(
@@ -148,25 +153,6 @@ class SalesOrder {
       oldItems.forEach(item => {
         oldItemsMap[item.product_id] = item.quantity;
       });
-      
-      // Handle inventory changes based on status transition
-      if (oldStatusName === 'confirmed' && newStatusName === 'pending') {
-        // If changing from confirmed to pending, add products back to inventory
-        for (const item of oldItems) {
-          await client.query(
-            `UPDATE public.products SET quantity = quantity + $1 WHERE id = $2 AND user_id = $3`,
-            [item.quantity, item.product_id, userId]
-          );
-
-          // Record inventory transaction for returning items to stock
-          await InventoryTransaction.recordTransaction(client, {
-            userId,
-            productId: item.product_id,
-            quantity: item.quantity, // Positive for returned to inventory
-            transactionTypeId: InventoryTransaction.TRANSACTION_TYPES.ADJUSTMENT
-          });
-        }
-      }
       
       // Delete old items
       await client.query(
@@ -223,7 +209,7 @@ class SalesOrder {
                   userId,
                   productId: item.productId,
                   quantity: -quantityDifference, // Negative for decreasing stock
-                  transactionTypeId: InventoryTransaction.TRANSACTION_TYPES.CONFIRMED_SALES_ORDER
+                  transactionTypeId: InventoryTransaction.TRANSACTION_TYPES.ADJUSTMENT
                 });
               }
             } else {
@@ -285,7 +271,7 @@ class SalesOrder {
             userId,
             productId: product_id,
             quantity: quantity, // Positive for increasing stock
-            transactionTypeId: InventoryTransaction.TRANSACTION_TYPES.ADJUSTMENT
+            transactionTypeId: InventoryTransaction.TRANSACTION_TYPES.CANCELLED_SALES_ORDER
           });
         }
       }
