@@ -82,7 +82,7 @@ class PurchaseReturn {
                 userId,
                 productId: item.productId,
                 quantity: -item.quantity, // Negative for returning to supplier
-                transactionTypeId: InventoryTransaction.TRANSACTION_TYPES.PURCHASE_RETURN
+                transactionTypeId: InventoryTransaction.TRANSACTION_TYPES.CONFIRMED_PURCHASE_RETURN
               });
             }
           } catch (error) {
@@ -264,7 +264,7 @@ class PurchaseReturn {
                     userId,
                     productId: item.productId,
                     quantity: -quantityDifference, // Negative for decreasing stock
-                    transactionTypeId: InventoryTransaction.TRANSACTION_TYPES.PURCHASE_RETURN
+                    transactionTypeId: InventoryTransaction.TRANSACTION_TYPES.CONFIRMED_PURCHASE_RETURN
                   });
                 }
               } else {
@@ -279,7 +279,7 @@ class PurchaseReturn {
                   userId,
                   productId: item.productId,
                   quantity: -item.quantity, // Negative for decreasing stock
-                  transactionTypeId: InventoryTransaction.TRANSACTION_TYPES.PURCHASE_RETURN
+                  transactionTypeId: InventoryTransaction.TRANSACTION_TYPES.CONFIRMED_PURCHASE_RETURN
                 });
               }
             }

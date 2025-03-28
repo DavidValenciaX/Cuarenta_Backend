@@ -64,7 +64,7 @@ class SalesOrder {
               userId,
               productId: item.productId,
               quantity: -item.quantity, // Negative for sales (stock decrease)
-              transactionTypeId: InventoryTransaction.TRANSACTION_TYPES.SALES_ORDER
+              transactionTypeId: InventoryTransaction.TRANSACTION_TYPES.CONFIRMED_SALES_ORDER
             });
           }
         }
@@ -204,7 +204,7 @@ class SalesOrder {
       // If items are provided, add new items and update inventory
       if (items && items.length > 0) {
         for (const item of items) {
-                  
+
           // Update inventory based on new status
           if (newStatusName === 'confirmed') {
             // If old status was also confirmed, only remove the difference from inventory
@@ -223,7 +223,7 @@ class SalesOrder {
                   userId,
                   productId: item.productId,
                   quantity: -quantityDifference, // Negative for decreasing stock
-                  transactionTypeId: InventoryTransaction.TRANSACTION_TYPES.SALES_ORDER
+                  transactionTypeId: InventoryTransaction.TRANSACTION_TYPES.CONFIRMED_SALES_ORDER
                 });
               }
             } else {
@@ -238,7 +238,7 @@ class SalesOrder {
                 userId,
                 productId: item.productId,
                 quantity: -item.quantity, // Negative for decreasing stock
-                transactionTypeId: InventoryTransaction.TRANSACTION_TYPES.SALES_ORDER
+                transactionTypeId: InventoryTransaction.TRANSACTION_TYPES.CONFIRMED_SALES_ORDER
               });
             }
           }

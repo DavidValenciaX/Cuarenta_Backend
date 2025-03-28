@@ -3,10 +3,10 @@ const pool = require('../config/data_base');
 class InventoryTransaction {
   // Transaction types constants (matching IDs in the database)
   static TRANSACTION_TYPES = {
-    PURCHASE_ORDER: 1,
-    SALES_ORDER: 2,
-    SALE_RETURN: 3,
-    PURCHASE_RETURN: 4,
+    CONFIRMED_PURCHASE_ORDER: 1,
+    CONFIRMED_SALES_ORDER: 2,
+    CONFIRMED_SALE_RETURN: 3,
+    CONFIRMED_PURCHASE_RETURN: 4,
     ADJUSTMENT: 5,
     LOSS: 6
   };

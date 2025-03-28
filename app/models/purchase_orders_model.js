@@ -64,7 +64,7 @@ class PurchaseOrder {
               userId,
               productId: item.productId,
               quantity: item.quantity, // Positive for purchases (stock increase)
-              transactionTypeId: InventoryTransaction.TRANSACTION_TYPES.PURCHASE_ORDER
+              transactionTypeId: InventoryTransaction.TRANSACTION_TYPES.CONFIRMED_PURCHASE_ORDER
             });
             
             const currentUnitCost = productResult.rows[0].unit_cost;
@@ -235,7 +235,7 @@ class PurchaseOrder {
                   userId,
                   productId: item.productId,
                   quantity: quantityDifference,
-                  transactionTypeId: InventoryTransaction.TRANSACTION_TYPES.PURCHASE_ORDER
+                  transactionTypeId: InventoryTransaction.TRANSACTION_TYPES.CONFIRMED_PURCHASE_ORDER
                 });
               }
             } else {
@@ -250,7 +250,7 @@ class PurchaseOrder {
                 userId,
                 productId: item.productId,
                 quantity: item.quantity, // Positive for increasing stock
-                transactionTypeId: InventoryTransaction.TRANSACTION_TYPES.PURCHASE_ORDER
+                transactionTypeId: InventoryTransaction.TRANSACTION_TYPES.CONFIRMED_PURCHASE_ORDER
               });
             }
             

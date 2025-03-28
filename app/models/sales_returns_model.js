@@ -82,7 +82,7 @@ class SalesReturn {
                 userId,
                 productId: item.productId,
                 quantity: item.quantity, // Positive for returns (stock increase)
-                transactionTypeId: InventoryTransaction.TRANSACTION_TYPES.SALE_RETURN
+                transactionTypeId: InventoryTransaction.TRANSACTION_TYPES.CONFIRMED_SALE_RETURN
               });
             }
           } catch (error) {
@@ -264,7 +264,7 @@ class SalesReturn {
                     userId,
                     productId: item.productId,
                     quantity: quantityDifference,
-                    transactionTypeId: InventoryTransaction.TRANSACTION_TYPES.SALE_RETURN
+                    transactionTypeId: InventoryTransaction.TRANSACTION_TYPES.CONFIRMED_SALE_RETURN
                   });
                 }
               } else {
@@ -279,7 +279,7 @@ class SalesReturn {
                   userId,
                   productId: item.productId,
                   quantity: item.quantity, // Positive for increasing stock
-                  transactionTypeId: InventoryTransaction.TRANSACTION_TYPES.SALE_RETURN
+                  transactionTypeId: InventoryTransaction.TRANSACTION_TYPES.CONFIRMED_SALE_RETURN
                 });
               }
             }
