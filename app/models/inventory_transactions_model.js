@@ -23,8 +23,8 @@ class InventoryTransaction {
     
     // If previousStock and newStock are provided, use them
     if (providedPreviousStock !== undefined && providedNewStock !== undefined) {
-      previousStock = providedPreviousStock;
-      newStock = providedNewStock;
+      previousStock = Number(providedPreviousStock);
+      newStock = Number(providedNewStock);
     } else {
       // Otherwise query the current stock level from products table
       const { rows } = await client.query(
@@ -37,10 +37,10 @@ class InventoryTransaction {
       }
       
       // Get the current stock level
-      previousStock = parseFloat(rows[0].quantity);
+      previousStock = Number(rows[0].quantity);
       
       // Calculate the new stock level
-      newStock = previousStock + parseFloat(quantity);
+      newStock = previousStock + Number(quantity);
     }
     
     // Insert the transaction with accurate stock levels
@@ -49,7 +49,7 @@ class InventoryTransaction {
         user_id, product_id, quantity, transaction_type_id, 
         previous_stock, new_stock
       ) VALUES($1, $2, $3, $4, $5, $6) RETURNING *`,
-      [userId, productId, quantity, transactionTypeId, previousStock, newStock]
+      [userId, productId, Number(quantity), transactionTypeId, previousStock, newStock]
     );
     
     return result.rows[0];

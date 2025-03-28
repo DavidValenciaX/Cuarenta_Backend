@@ -14,29 +14,29 @@ class Product {
            image_url, category_id, unit_of_measure_id,
            quantity, barcode
          ) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING *`,
-        [userId, name, description, unitPrice, unitCost, imageUrl, categoryId, unitOfMeasureId, initialQuantity, barcode]
+        [userId, name, description, Number(unitPrice), Number(unitCost), imageUrl, categoryId, unitOfMeasureId, initialQuantity, barcode]
       );
       
       // Then record transaction BEFORE updating the quantity
-      if (quantity > 0) {
+      if (Number(quantity) > 0) {
         // Record the transaction directly with explicit previous_stock=0
         await client.query(
           `INSERT INTO public.inventory_transactions(
             user_id, product_id, quantity, transaction_type_id, 
             previous_stock, new_stock
           ) VALUES($1, $2, $3, $4, $5, $6)`,
-          [userId, rows[0].id, quantity, 9, initialQuantity, quantity]
+          [userId, rows[0].id, Number(quantity), 9, initialQuantity, Number(quantity)]
         );
         
         // Then update the quantity
         await client.query(
           `UPDATE public.products SET quantity = $1 WHERE id = $2`,
-          [quantity, rows[0].id]
+          [Number(quantity), rows[0].id]
         );
       }
       
       // Return the product with the updated quantity
-      rows[0].quantity = quantity;
+      rows[0].quantity = Number(quantity);
       return rows[0];
     });
   }
@@ -85,13 +85,13 @@ class Product {
         return null;
       }
       
-      const oldQuantity = currentProduct[0].quantity;
-      const newQuantity = data.quantity;
+      const oldQuantity = Number(currentProduct[0].quantity);
+      const newQuantity = Number(data.quantity);
       
       const values = [
-        data.name, data.description, data.unitPrice, data.unitCost,
+        data.name, data.description, Number(data.unitPrice), Number(data.unitCost),
         data.imageUrl, data.categoryId,
-        data.unitOfMeasureId, data.quantity, data.barcode,
+        data.unitOfMeasureId, newQuantity, data.barcode,
         id, userId
       ];
       
@@ -114,7 +114,7 @@ class Product {
             user_id, product_id, quantity, transaction_type_id, 
             previous_stock, new_stock
           ) VALUES($1, $2, $3, $4, $5, $6)`,
-          [userId, id, quantityDifference, 9, oldQuantity, newQuantity]
+          [userId, id, Number(quantityDifference), 9, oldQuantity, newQuantity]
         );
       }
       
@@ -143,7 +143,7 @@ class Product {
     );
     
     if (rows.length === 0) return false;
-    return rows[0].quantity >= requiredQuantity;
+    return Number(rows[0].quantity) >= Number(requiredQuantity);
   }
 
   // Adjust product quantity directly (for manual adjustments)
@@ -159,8 +159,9 @@ class Product {
         return null;
       }
       
-      const previousStock = currentProduct[0].quantity;
-      const newStock = previousStock + adjustmentQuantity;
+      const previousStock = Number(currentProduct[0].quantity);
+      const adjustmentQty = Number(adjustmentQuantity);
+      const newStock = previousStock + adjustmentQty;
       
       // Update product quantity
       const { rows } = await client.query(
@@ -173,14 +174,14 @@ class Product {
       }
       
       // Record inventory transaction directly
-      const transactionType = adjustmentQuantity < 0 ? 10 : 9; // 10=LOSS, 9=ADJUSTMENT
+      const transactionType = adjustmentQty < 0 ? 10 : 9; // 10=LOSS, 9=ADJUSTMENT
       
       await client.query(
         `INSERT INTO public.inventory_transactions(
           user_id, product_id, quantity, transaction_type_id, 
           previous_stock, new_stock
         ) VALUES($1, $2, $3, $4, $5, $6)`,
-        [userId, id, adjustmentQuantity, transactionType, previousStock, newStock]
+        [userId, id, adjustmentQty, transactionType, previousStock, newStock]
       );
       
       return rows[0];

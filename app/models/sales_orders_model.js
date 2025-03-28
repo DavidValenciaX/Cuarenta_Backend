@@ -50,7 +50,7 @@ class SalesOrder {
               SET quantity = quantity - $1
               WHERE id = $2 AND user_id = $3
               RETURNING quantity`,
-              [item.quantity, item.productId, userId]
+              [Number(item.quantity), item.productId, userId]
             );
             
             if (!productResult.rows.length) {
@@ -66,7 +66,7 @@ class SalesOrder {
                 user_id, product_id, quantity, transaction_type_id, 
                 previous_stock, new_stock
               ) VALUES($1, $2, $3, $4, $5, $6)`,
-              [userId, item.productId, -item.quantity, 3, previousStock, currentStock]
+              [userId, item.productId, -Number(item.quantity), 3, previousStock, currentStock]
             );
           }
         }
@@ -197,8 +197,8 @@ class SalesOrder {
           if (newStatusName === 'confirmed') {
             // If old status was also confirmed, only remove the difference from inventory
             if (oldStatusName === 'confirmed') {
-              const oldQuantity = oldItemsMap[item.productId] || 0;
-              const quantityDifference = item.quantity - oldQuantity;
+              const oldQuantity = Number(oldItemsMap[item.productId] || 0);
+              const quantityDifference = Number(item.quantity) - oldQuantity;
               
               if (quantityDifference !== 0) {
                 const productResult = await client.query(
@@ -206,8 +206,8 @@ class SalesOrder {
                   [quantityDifference, item.productId, userId]
                 );
                 
-                const currentStock = productResult.rows[0].quantity;
-                const previousStock = currentStock + parseFloat(quantityDifference);
+                const currentStock = Number(productResult.rows[0].quantity);
+                const previousStock = currentStock + Number(quantityDifference);
 
                 // Direct SQL insert for adjustment transaction
                 await client.query(
@@ -222,11 +222,11 @@ class SalesOrder {
               // If changing from another status to confirmed, remove full quantity
               const productResult = await client.query(
                 `UPDATE public.products SET quantity = quantity - $1 WHERE id = $2 AND user_id = $3 RETURNING quantity`,
-                [item.quantity, item.productId, userId]
+                [Number(item.quantity), item.productId, userId]
               );
               
-              const currentStock = productResult.rows[0].quantity;
-              const previousStock = currentStock + parseFloat(item.quantity);
+              const currentStock = Number(productResult.rows[0].quantity);
+              const previousStock = currentStock + Number(item.quantity);
 
               // Direct SQL insert for confirmed sales order
               await client.query(
@@ -234,7 +234,7 @@ class SalesOrder {
                   user_id, product_id, quantity, transaction_type_id, 
                   previous_stock, new_stock
                 ) VALUES($1, $2, $3, $4, $5, $6)`,
-                [userId, item.productId, -item.quantity, 3, previousStock, currentStock]
+                [userId, item.productId, -Number(item.quantity), 3, previousStock, currentStock]
               );
             }
           }
@@ -273,11 +273,11 @@ class SalesOrder {
         for (const { product_id, quantity } of items) {
           const productResult = await client.query(
             `UPDATE public.products SET quantity = quantity + $1 WHERE id = $2 AND user_id = $3 RETURNING quantity`,
-            [quantity, product_id, userId]
+            [Number(quantity), product_id, userId]
           );
           
-          const currentStock = productResult.rows[0].quantity;
-          const previousStock = currentStock - parseFloat(quantity);
+          const currentStock = Number(productResult.rows[0].quantity);
+          const previousStock = currentStock - Number(quantity);
 
           // Direct SQL insert for cancelled sales order
           await client.query(
@@ -285,7 +285,7 @@ class SalesOrder {
               user_id, product_id, quantity, transaction_type_id, 
               previous_stock, new_stock
             ) VALUES($1, $2, $3, $4, $5, $6)`,
-            [userId, product_id, quantity, 4, previousStock, currentStock]
+            [userId, product_id, Number(quantity), 4, previousStock, currentStock]
           );
         }
       }

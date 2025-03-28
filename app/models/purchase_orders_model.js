@@ -51,7 +51,7 @@ class PurchaseOrder {
                SET quantity = quantity + $1
                WHERE id = $2 AND user_id = $3
                RETURNING unit_cost, quantity`,
-              [item.quantity, item.productId, userId]
+              [Number(item.quantity), item.productId, userId]
             );
             
             if (!productResult.rows.length) {
@@ -59,26 +59,26 @@ class PurchaseOrder {
             }
             
             // Direct SQL insert for confirmed purchase order
-            const currentStock = productResult.rows[0].quantity;
-            const previousStock = currentStock - parseFloat(item.quantity);
+            const currentStock = Number(productResult.rows[0].quantity);
+            const previousStock = currentStock - Number(item.quantity);
             
             await client.query(
               `INSERT INTO public.inventory_transactions(
                 user_id, product_id, quantity, transaction_type_id, 
                 previous_stock, new_stock
               ) VALUES($1, $2, $3, $4, $5, $6)`,
-              [userId, item.productId, item.quantity, 1, previousStock, currentStock]
+              [userId, item.productId, Number(item.quantity), 1, previousStock, currentStock]
             );
             
-            const currentUnitCost = productResult.rows[0].unit_cost;
+            const currentUnitCost = Number(productResult.rows[0].unit_cost);
             
-            if (item.unitCost > currentUnitCost) {
+            if (Number(item.unitCost) > currentUnitCost) {
               // Update the unit cost for the product
               await client.query(
                 `UPDATE public.products
                  SET unit_cost = $1
                  WHERE id = $2 AND user_id = $3`,
-                [item.unitCost, item.productId, userId]
+                [Number(item.unitCost), item.productId, userId]
               );
             }
           }
@@ -210,8 +210,8 @@ class PurchaseOrder {
           if (newStatusName === 'confirmed') {
             // If old status was also confirmed, only add the difference to inventory
             if (oldStatusName === 'confirmed') {
-              const oldQuantity = oldItemsMap[item.productId] || 0;
-              const quantityDifference = item.quantity - oldQuantity;
+              const oldQuantity = Number(oldItemsMap[item.productId] || 0);
+              const quantityDifference = Number(item.quantity) - oldQuantity;
               
               if (quantityDifference !== 0) {
                 const productResult = await client.query(
@@ -219,8 +219,8 @@ class PurchaseOrder {
                   [quantityDifference, item.productId, userId]
                 );
                 
-                const currentStock = productResult.rows[0].quantity;
-                const previousStock = currentStock - parseFloat(quantityDifference);
+                const currentStock = Number(productResult.rows[0].quantity);
+                const previousStock = currentStock - Number(quantityDifference);
 
                 // Direct SQL insert for adjustment transaction
                 await client.query(
@@ -235,11 +235,11 @@ class PurchaseOrder {
               // If changing from another status to confirmed, add full quantity
               const productResult = await client.query(
                 `UPDATE public.products SET quantity = quantity + $1 WHERE id = $2 AND user_id = $3 RETURNING quantity`,
-                [item.quantity, item.productId, userId]
+                [Number(item.quantity), item.productId, userId]
               );
               
-              const currentStock = productResult.rows[0].quantity;
-              const previousStock = currentStock - parseFloat(item.quantity);
+              const currentStock = Number(productResult.rows[0].quantity);
+              const previousStock = currentStock - Number(item.quantity);
 
               // Direct SQL insert for confirmed purchase order
               await client.query(
@@ -247,7 +247,7 @@ class PurchaseOrder {
                   user_id, product_id, quantity, transaction_type_id, 
                   previous_stock, new_stock
                 ) VALUES($1, $2, $3, $4, $5, $6)`,
-                [userId, item.productId, item.quantity, 1, previousStock, currentStock]
+                [userId, item.productId, Number(item.quantity), 1, previousStock, currentStock]
               );
             }
             
@@ -256,10 +256,10 @@ class PurchaseOrder {
               [item.productId, userId]
             );
             
-            if (productInfo.length > 0 && item.unitCost > productInfo[0].unit_cost) {
+            if (productInfo.length > 0 && Number(item.unitCost) > Number(productInfo[0].unit_cost)) {
               await client.query(
                 `UPDATE public.products SET unit_cost = $1 WHERE id = $2 AND user_id = $3`,
-                [item.unitCost, item.productId, userId]
+                [Number(item.unitCost), item.productId, userId]
               );
             }
           }
@@ -298,11 +298,11 @@ class PurchaseOrder {
         for (const { product_id, quantity } of items) {
           const productResult = await client.query(
             `UPDATE public.products SET quantity = quantity - $1 WHERE id = $2 AND user_id = $3 RETURNING quantity`,
-            [quantity, product_id, userId]
+            [Number(quantity), product_id, userId]
           );
           
-          const currentStock = productResult.rows[0].quantity;
-          const previousStock = currentStock + parseFloat(quantity);
+          const currentStock = Number(productResult.rows[0].quantity);
+          const previousStock = currentStock + Number(quantity);
 
           // Direct SQL insert for cancelled purchase order
           await client.query(

@@ -52,7 +52,7 @@ class SalesReturn {
                SET quantity = quantity + $1
                WHERE id = $2 AND user_id = $3
                RETURNING quantity`,
-              [item.quantity, item.productId, userId]
+              [Number(item.quantity), item.productId, userId]
             );
             
             if (!productResult.rows.length) {
@@ -60,15 +60,15 @@ class SalesReturn {
             }
             
             // Direct SQL insert for sale return transaction
-            const currentStock = productResult.rows[0].quantity;
-            const previousStock = currentStock - parseFloat(item.quantity);
+            const currentStock = Number(productResult.rows[0].quantity);
+            const previousStock = currentStock - Number(item.quantity);
             
             await client.query(
               `INSERT INTO public.inventory_transactions(
                 user_id, product_id, quantity, transaction_type_id, 
                 previous_stock, new_stock
               ) VALUES($1, $2, $3, $4, $5, $6)`,
-              [userId, item.productId, item.quantity, 5, previousStock, currentStock]
+              [userId, item.productId, Number(item.quantity), 5, previousStock, currentStock]
             );
           } catch (error) {
             // Handle unique constraint violation
@@ -150,11 +150,11 @@ class SalesReturn {
       for (const item of oldItems) {
         const productResult = await client.query(
           `UPDATE public.products SET quantity = quantity - $1 WHERE id = $2 AND user_id = $3 RETURNING quantity`,
-          [item.quantity, item.product_id, userId]
+          [Number(item.quantity), item.product_id, userId]
         );
         
-        const currentStock = productResult.rows[0].quantity;
-        const previousStock = currentStock + parseFloat(item.quantity);
+        const currentStock = Number(productResult.rows[0].quantity);
+        const previousStock = currentStock + Number(item.quantity);
         
         // Direct SQL insert for adjustment transaction
         await client.query(
@@ -162,7 +162,7 @@ class SalesReturn {
             user_id, product_id, quantity, transaction_type_id, 
             previous_stock, new_stock
           ) VALUES($1, $2, $3, $4, $5, $6)`,
-          [userId, item.product_id, -item.quantity, 9, previousStock, currentStock]
+          [userId, item.product_id, -Number(item.quantity), 9, previousStock, currentStock]
         );
       }
       
@@ -215,11 +215,11 @@ class SalesReturn {
             // Always update inventory since all returns are confirmed
             const productResult = await client.query(
               `UPDATE public.products SET quantity = quantity + $1 WHERE id = $2 AND user_id = $3 RETURNING quantity`,
-              [item.quantity, item.productId, userId]
+              [Number(item.quantity), item.productId, userId]
             );
             
-            const currentStock = productResult.rows[0].quantity;
-            const previousStock = currentStock - parseFloat(item.quantity);
+            const currentStock = Number(productResult.rows[0].quantity);
+            const previousStock = currentStock - Number(item.quantity);
             
             // Direct SQL insert for sale return transaction
             await client.query(
@@ -227,7 +227,7 @@ class SalesReturn {
                 user_id, product_id, quantity, transaction_type_id, 
                 previous_stock, new_stock
               ) VALUES($1, $2, $3, $4, $5, $6)`,
-              [userId, item.productId, item.quantity, 5, previousStock, currentStock]
+              [userId, item.productId, Number(item.quantity), 5, previousStock, currentStock]
             );
           } catch (error) {
             // Handle unique constraint violation
@@ -256,11 +256,11 @@ class SalesReturn {
       for (const { product_id, quantity } of items) {
         const productResult = await client.query(
           `UPDATE public.products SET quantity = quantity - $1 WHERE id = $2 AND user_id = $3 RETURNING quantity`,
-          [quantity, product_id, userId]
+          [Number(quantity), product_id, userId]
         );
         
-        const currentStock = productResult.rows[0].quantity;
-        const previousStock = currentStock + parseFloat(quantity);
+        const currentStock = Number(productResult.rows[0].quantity);
+        const previousStock = currentStock + Number(quantity);
         
         // Direct SQL insert for cancelled sale return transaction
         await client.query(
@@ -268,7 +268,7 @@ class SalesReturn {
             user_id, product_id, quantity, transaction_type_id, 
             previous_stock, new_stock
           ) VALUES($1, $2, $3, $4, $5, $6)`,
-          [userId, product_id, -quantity, 6, previousStock, currentStock]
+          [userId, product_id, -Number(quantity), 6, previousStock, currentStock]
         );
       }
       
