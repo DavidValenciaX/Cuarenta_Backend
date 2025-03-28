@@ -47,22 +47,7 @@ class SalesReturn {
       if (items && items.length > 0) {
         for (const item of items) {
           try {
-            const result = await client.query(
-              `INSERT INTO public.sales_return_products(
-                 sales_return_id, product_id, quantity, status_id
-               )
-               VALUES ($1, $2, $3, $4)
-               RETURNING id`,
-              [
-                salesReturn.id, 
-                item.productId, 
-                item.quantity, 
-                item.statusId || statusId
-              ]
-            );
-            
-            const salesReturnProductId = result.rows[0].id;
-            
+
             // Update product inventory (increase stock) if status is 'confirmed' or 'completed'
             if (shouldUpdateInventory) {
               const productResult = await client.query(
@@ -235,16 +220,6 @@ class SalesReturn {
       if (items && items.length > 0) {
         for (const item of items) {
           try {
-            const result = await client.query(
-              `INSERT INTO public.sales_return_products(
-                 sales_return_id, product_id, quantity, status_id
-               )
-               VALUES($1, $2, $3, $4)
-               RETURNING id`,
-              [id, item.productId, item.quantity, item.statusId || statusId]
-            );
-            
-            const salesReturnProductId = result.rows[0].id;
             
             // Update inventory based on new status
             if (willBeConfirmed) {
