@@ -44,13 +44,12 @@ class SalesOrder {
       if (items && items.length > 0) {
         for (const item of items) {
 
-          // Update product inventory (decrease stock) only if status is 'confirmed'
           if (shouldUpdateInventory) {
             const productResult = await client.query(
               `UPDATE public.products
-               SET quantity = quantity - $1
-               WHERE id = $2 AND user_id = $3
-               RETURNING quantity`,
+              SET quantity = quantity - $1
+              WHERE id = $2 AND user_id = $3
+              RETURNING quantity`,
               [item.quantity, item.productId, userId]
             );
             
@@ -59,8 +58,8 @@ class SalesOrder {
             }
 
             // Record the inventory transaction directly with SQL
-            const currentStock = productResult.rows[0].quantity;
-            const previousStock = currentStock + parseFloat(item.quantity);
+            const currentStock = Number(productResult.rows[0].quantity);
+            const previousStock = currentStock + Number(item.quantity);
             
             await client.query(
               `INSERT INTO public.inventory_transactions(
