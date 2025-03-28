@@ -41,7 +41,7 @@ class SalesReturn {
       );
       
       const statusName = statusResult.rows[0]?.name;
-      const shouldUpdateInventory = statusName === 'confirmed' || statusName === 'completed';
+      const shouldUpdateInventory = statusName === 'confirmed';
       
       // Insert all the sales return products
       if (items && items.length > 0) {
@@ -296,7 +296,7 @@ class SalesReturn {
       
       // Only update inventory if the return was confirmed or completed
       const statusName = returnInfo[0].status_name;
-      if (statusName === 'confirmed' || statusName === 'completed') {
+      if (statusName === 'confirmed') {
         // Update inventory for each product (remove from stock)
         for (const { product_id, quantity } of items) {
           await client.query(
