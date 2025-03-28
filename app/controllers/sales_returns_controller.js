@@ -13,11 +13,11 @@ function toNumber(value) {
 async function createSalesReturn(req, res) {
   try {
     const userId = req.usuario.userId;
-    const { salesOrderId, statusId, returnDate, notes, items } = req.body;
+    const { salesOrderId, returnDate, notes, items } = req.body;
 
     // Validate required fields
-    if (!salesOrderId || statusId == null || !Array.isArray(items) || items.length === 0) {
-      return sendResponse(res, 400, 'error', 'Orden de venta, estado y al menos un producto son requeridos');
+    if (!salesOrderId || !Array.isArray(items) || items.length === 0) {
+      return sendResponse(res, 400, 'error', 'Orden de venta y al menos un producto son requeridos');
     }
     
     // Validate sales order
@@ -44,7 +44,7 @@ async function createSalesReturn(req, res) {
       validatedItems.push({
         productId: item.productId,
         quantity: qty,
-        statusId: item.statusId || statusId
+        statusId: item.statusId
       });
     }
 
@@ -52,7 +52,6 @@ async function createSalesReturn(req, res) {
     const salesReturn = await SalesReturn.create({
       userId,
       salesOrderId,
-      statusId,
       notes,
       returnDate,
       items: validatedItems
@@ -109,11 +108,11 @@ async function updateSalesReturn(req, res) {
   try {
     const userId = req.usuario.userId;
     const salesReturnId = req.params.id;
-    const { salesOrderId, statusId, returnDate, notes, items } = req.body;
+    const { salesOrderId, returnDate, notes, items } = req.body;
 
     // Validate required fields
-    if (!salesOrderId || statusId == null || !Array.isArray(items) || items.length === 0) {
-      return sendResponse(res, 400, 'error', 'Orden de venta, estado y al menos un producto son requeridos');
+    if (!salesOrderId || !Array.isArray(items) || items.length === 0) {
+      return sendResponse(res, 400, 'error', 'Orden de venta y al menos un producto son requeridos');
     }
 
     // Validate sales order belongs to user
@@ -146,14 +145,13 @@ async function updateSalesReturn(req, res) {
       validatedItems.push({
         productId: item.productId,
         quantity: qty,
-        statusId: item.statusId || statusId
+        statusId: item.statusId
       });
     }
 
     // Update the sales return
     const updated = await SalesReturn.update(salesReturnId, {
       salesOrderId,
-      statusId,
       notes,
       returnDate,
       items: validatedItems
