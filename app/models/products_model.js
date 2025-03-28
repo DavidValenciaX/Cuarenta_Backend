@@ -139,28 +139,6 @@ class Product {
 
   static async delete(id, userId) {
     return this.executeWithTransaction(async (client) => {
-      // Get current product to record quantity removal
-      const { rows: currentProduct } = await client.query(
-        `SELECT * FROM public.products WHERE id = $1 AND user_id = $2`,
-        [id, userId]
-      );
-      
-      if (currentProduct.length === 0) {
-        return null;
-      }
-      
-      const currentQuantity = currentProduct[0].quantity;
-      
-      // Record inventory transaction for removing all stock
-      if (currentQuantity > 0) {
-        await InventoryTransaction.recordTransaction(client, {
-          userId,
-          productId: id,
-          quantity: -currentQuantity, // Negative to remove all stock
-          transactionTypeId: InventoryTransaction.TRANSACTION_TYPES.LOSS
-        });
-      }
-      
       // Delete the product
       const { rows } = await client.query(
         `DELETE FROM public.products WHERE id=$1 AND user_id=$2 RETURNING *`,
