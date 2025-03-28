@@ -7,25 +7,44 @@ class Product {
     const { userId, name, description, unitPrice, unitCost, imageUrl, categoryId, unitOfMeasureId, quantity, barcode } = data;
     
     return this.executeWithTransaction(async (client) => {
+      // First create the product with zero quantity
+      const initialQuantity = 0;
       const { rows } = await client.query(
         `INSERT INTO public.products(
            user_id, name, description, unit_price, unit_cost,
            image_url, category_id, unit_of_measure_id,
            quantity, barcode
          ) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING *`,
-        [userId, name, description, unitPrice, unitCost, imageUrl, categoryId, unitOfMeasureId, quantity, barcode]
+        [userId, name, description, unitPrice, unitCost, imageUrl, categoryId, unitOfMeasureId, initialQuantity, barcode]
       );
       
-      // Record inventory transaction for initial stock
+      // Then record transaction BEFORE updating the quantity
       if (quantity > 0) {
-        await InventoryTransaction.recordTransaction(client, {
-          userId,
-          productId: rows[0].id,
-          quantity: quantity,
-          transactionTypeId: InventoryTransaction.TRANSACTION_TYPES.ADJUSTMENT
-        });
+        // Record the transaction first with explicit previous_stock=0
+        await client.query(
+          `INSERT INTO public.inventory_transactions(
+            user_id, product_id, quantity, transaction_type_id, 
+            previous_stock, new_stock
+           ) VALUES($1, $2, $3, $4, $5, $6)`,
+          [
+            userId, 
+            rows[0].id, 
+            quantity, 
+            InventoryTransaction.TRANSACTION_TYPES.ADJUSTMENT,
+            initialQuantity,  // Previous stock is 0
+            quantity          // New stock is the quantity
+          ]
+        );
+        
+        // Then update the quantity
+        await client.query(
+          `UPDATE public.products SET quantity = $1 WHERE id = $2`,
+          [quantity, rows[0].id]
+        );
       }
       
+      // Return the product with the updated quantity
+      rows[0].quantity = quantity;
       return rows[0];
     });
   }
