@@ -15,10 +15,8 @@ class InventoryTransaction {
   static async recordTransaction(client, {
     userId,
     productId,
-    quantity, // Positive for increases, negative for decreases
+    quantity,
     transactionTypeId,
-    salesOrderProductId = null,
-    purchaseOrderProductId = null
   }) {
     // Get the current stock level
     const { rows: productRows } = await client.query(
@@ -30,25 +28,23 @@ class InventoryTransaction {
       throw new Error(`Product with ID ${productId} not found`);
     }
     
-    const previousStock = productRows[0].quantity;
-    const newStock = previousStock + quantity;
+    const previousStock = parseFloat(productRows[0].quantity);
+    const numericQuantity = parseFloat(quantity);
+    const newStock = previousStock + numericQuantity;
     
     // Record the transaction
     const { rows } = await client.query(
       `INSERT INTO public.inventory_transactions(
         user_id, product_id, quantity, transaction_type_id,
-        sales_order_product_id, purchase_order_product_id,
         previous_stock, new_stock
       )
-      VALUES($1, $2, $3, $4, $5, $6, $7, $8)
+      VALUES($1, $2, $3, $4, $5, $6)
       RETURNING *`,
       [
         userId,
         productId,
-        quantity,
+        numericQuantity,
         transactionTypeId,
-        salesOrderProductId,
-        purchaseOrderProductId,
         previousStock,
         newStock
       ]

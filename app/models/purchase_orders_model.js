@@ -44,15 +44,7 @@ class PurchaseOrder {
       // Insert all the purchase order products
       if (items && items.length > 0) {
         for (const item of items) {
-          const result = await client.query(
-            `INSERT INTO public.purchase_order_products(purchase_order_id, product_id, quantity, unit_cost)
-             VALUES ($1, $2, $3, $4)
-             RETURNING id`,
-            [purchaseOrder.id, item.productId, item.quantity, item.unitCost]
-          );
-          
-          const purchaseOrderProductId = result.rows[0].id;
-          
+
           // Update product quantity in inventory only if status is 'confirmed'
           if (shouldUpdateInventory) {
             const productResult = await client.query(
@@ -72,9 +64,7 @@ class PurchaseOrder {
               userId,
               productId: item.productId,
               quantity: item.quantity, // Positive for purchases (stock increase)
-              transactionTypeId: InventoryTransaction.TRANSACTION_TYPES.PURCHASE_ORDER,
-              salesOrderProductId: null,
-              purchaseOrderProductId: purchaseOrderProductId
+              transactionTypeId: InventoryTransaction.TRANSACTION_TYPES.PURCHASE_ORDER
             });
             
             const currentUnitCost = productResult.rows[0].unit_cost;
@@ -172,8 +162,8 @@ class PurchaseOrder {
       });
       
       // Handle inventory changes based on status transition
-      if (oldStatusName === 'confirmed' && (newStatusName === 'pending' || newStatusName === 'cancelled')) {
-        // If changing from confirmed to pending/cancelled, subtract products from inventory
+      if (oldStatusName === 'confirmed' && newStatusName === 'pending') {
+        // If changing from confirmed to pending, subtract products from inventory
         for (const item of oldItems) {
           await client.query(
             `UPDATE public.products SET quantity = quantity - $1 WHERE id = $2 AND user_id = $3`,
@@ -185,9 +175,7 @@ class PurchaseOrder {
             userId,
             productId: item.product_id,
             quantity: -item.quantity, // Negative for decreasing stock
-            transactionTypeId: InventoryTransaction.TRANSACTION_TYPES.ADJUSTMENT,
-            salesOrderProductId: null,
-            purchaseOrderProductId: null
+            transactionTypeId: InventoryTransaction.TRANSACTION_TYPES.ADJUSTMENT
           });
         }
       }
@@ -228,14 +216,6 @@ class PurchaseOrder {
       // If items are provided, add new items
       if (items && items.length > 0) {
         for (const item of items) {
-          const result = await client.query(
-            `INSERT INTO public.purchase_order_products(purchase_order_id, product_id, quantity, unit_cost)
-             VALUES($1, $2, $3, $4)
-             RETURNING id`,
-            [id, item.productId, item.quantity, item.unitCost]
-          );
-          
-          const purchaseOrderProductId = result.rows[0].id;
           
           // Update inventory based on new status
           if (newStatusName === 'confirmed') {
@@ -255,9 +235,7 @@ class PurchaseOrder {
                   userId,
                   productId: item.productId,
                   quantity: quantityDifference,
-                  transactionTypeId: InventoryTransaction.TRANSACTION_TYPES.PURCHASE_ORDER,
-                  salesOrderProductId: null,
-                  purchaseOrderProductId: purchaseOrderProductId
+                  transactionTypeId: InventoryTransaction.TRANSACTION_TYPES.PURCHASE_ORDER
                 });
               }
             } else {
@@ -272,9 +250,7 @@ class PurchaseOrder {
                 userId,
                 productId: item.productId,
                 quantity: item.quantity, // Positive for increasing stock
-                transactionTypeId: InventoryTransaction.TRANSACTION_TYPES.PURCHASE_ORDER,
-                salesOrderProductId: null,
-                purchaseOrderProductId: purchaseOrderProductId
+                transactionTypeId: InventoryTransaction.TRANSACTION_TYPES.PURCHASE_ORDER
               });
             }
             
@@ -333,9 +309,7 @@ class PurchaseOrder {
             userId,
             productId: product_id,
             quantity: -quantity, // Negative for decreasing stock
-            transactionTypeId: InventoryTransaction.TRANSACTION_TYPES.ADJUSTMENT,
-            salesOrderProductId: null,
-            purchaseOrderProductId: null
+            transactionTypeId: InventoryTransaction.TRANSACTION_TYPES.ADJUSTMENT
           });
         }
       }

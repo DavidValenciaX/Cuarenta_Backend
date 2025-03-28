@@ -82,9 +82,7 @@ class SalesReturn {
                 userId,
                 productId: item.productId,
                 quantity: item.quantity, // Positive for returns (stock increase)
-                transactionTypeId: InventoryTransaction.TRANSACTION_TYPES.SALE_RETURN,
-                salesOrderProductId: null,
-                purchaseOrderProductId: null
+                transactionTypeId: InventoryTransaction.TRANSACTION_TYPES.SALE_RETURN
               });
             }
           } catch (error) {
@@ -195,9 +193,7 @@ class SalesReturn {
             userId,
             productId: item.product_id,
             quantity: -item.quantity, // Negative for stock decrease
-            transactionTypeId: InventoryTransaction.TRANSACTION_TYPES.ADJUSTMENT,
-            salesOrderProductId: null,
-            purchaseOrderProductId: null
+            transactionTypeId: InventoryTransaction.TRANSACTION_TYPES.ADJUSTMENT
           });
         }
       }
@@ -268,9 +264,7 @@ class SalesReturn {
                     userId,
                     productId: item.productId,
                     quantity: quantityDifference,
-                    transactionTypeId: InventoryTransaction.TRANSACTION_TYPES.SALE_RETURN,
-                    salesOrderProductId: null,
-                    purchaseOrderProductId: null
+                    transactionTypeId: InventoryTransaction.TRANSACTION_TYPES.SALE_RETURN
                   });
                 }
               } else {
@@ -285,9 +279,7 @@ class SalesReturn {
                   userId,
                   productId: item.productId,
                   quantity: item.quantity, // Positive for increasing stock
-                  transactionTypeId: InventoryTransaction.TRANSACTION_TYPES.SALE_RETURN,
-                  salesOrderProductId: null,
-                  purchaseOrderProductId: null
+                  transactionTypeId: InventoryTransaction.TRANSACTION_TYPES.SALE_RETURN
                 });
               }
             }
@@ -342,9 +334,7 @@ class SalesReturn {
             userId,
             productId: product_id,
             quantity: -quantity, // Negative for stock decrease
-            transactionTypeId: InventoryTransaction.TRANSACTION_TYPES.ADJUSTMENT,
-            salesOrderProductId: null,
-            purchaseOrderProductId: null
+            transactionTypeId: InventoryTransaction.TRANSACTION_TYPES.ADJUSTMENT
           });
         }
       }

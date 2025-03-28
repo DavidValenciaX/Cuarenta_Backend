@@ -121,9 +121,7 @@ class Product {
         userId,
         productId: id,
         quantity: adjustmentQuantity,
-        transactionTypeId: transactionType,
-        salesOrderProductId: null,
-        purchaseOrderProductId: null
+        transactionTypeId: transactionType
       });
       
       return rows[0];
