@@ -5,15 +5,29 @@ class Product {
   
   static async create(data) {
     const { userId, name, description, unitPrice, unitCost, imageUrl, categoryId, unitOfMeasureId, quantity, barcode } = data;
-    const { rows } = await pool.query(
-      `INSERT INTO public.products(
-         user_id, name, description, unit_price, unit_cost,
-         image_url, category_id, unit_of_measure_id,
-         quantity, barcode
-       ) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING *`,
-      [userId, name, description, unitPrice, unitCost, imageUrl, categoryId, unitOfMeasureId, quantity, barcode]
-    );
-    return rows[0];
+    
+    return this.executeWithTransaction(async (client) => {
+      const { rows } = await client.query(
+        `INSERT INTO public.products(
+           user_id, name, description, unit_price, unit_cost,
+           image_url, category_id, unit_of_measure_id,
+           quantity, barcode
+         ) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING *`,
+        [userId, name, description, unitPrice, unitCost, imageUrl, categoryId, unitOfMeasureId, quantity, barcode]
+      );
+      
+      // Record inventory transaction for initial stock
+      if (quantity > 0) {
+        await InventoryTransaction.recordTransaction(client, {
+          userId,
+          productId: rows[0].id,
+          quantity: quantity,
+          transactionTypeId: InventoryTransaction.TRANSACTION_TYPES.ADJUSTMENT
+        });
+      }
+      
+      return rows[0];
+    });
   }
   
   static async findAllByUser(userId) {
@@ -49,29 +63,84 @@ class Product {
   }
 
   static async update(id, data, userId) {
-    const values = [
-      data.name, data.description, data.unitPrice, data.unitCost,
-      data.imageUrl, data.categoryId,
-      data.unitOfMeasureId, data.quantity, data.barcode,
-      id, userId
-    ];
-    const { rows } = await pool.query(
-      `UPDATE public.products
-       SET name=$1, description=$2, unit_price=$3, unit_cost=$4,
-           image_url=$5, category_id=$6,
-           unit_of_measure_id=$7, quantity=$8, barcode=$9
-       WHERE id=$10 AND user_id=$11 RETURNING *`,
-      values
-    );
-    return rows[0];
+    return this.executeWithTransaction(async (client) => {
+      // Get current product to check if quantity is changing
+      const { rows: currentProduct } = await client.query(
+        `SELECT * FROM public.products WHERE id = $1 AND user_id = $2`,
+        [id, userId]
+      );
+      
+      if (currentProduct.length === 0) {
+        return null;
+      }
+      
+      const oldQuantity = currentProduct[0].quantity;
+      const newQuantity = data.quantity;
+      
+      const values = [
+        data.name, data.description, data.unitPrice, data.unitCost,
+        data.imageUrl, data.categoryId,
+        data.unitOfMeasureId, data.quantity, data.barcode,
+        id, userId
+      ];
+      
+      const { rows } = await client.query(
+        `UPDATE public.products
+         SET name=$1, description=$2, unit_price=$3, unit_cost=$4,
+             image_url=$5, category_id=$6,
+             unit_of_measure_id=$7, quantity=$8, barcode=$9
+         WHERE id=$10 AND user_id=$11 RETURNING *`,
+        values
+      );
+      
+      // Record inventory transaction only if quantity has changed
+      if (rows.length > 0 && oldQuantity !== newQuantity) {
+        const quantityDifference = newQuantity - oldQuantity;
+        
+        await InventoryTransaction.recordTransaction(client, {
+          userId,
+          productId: id,
+          quantity: quantityDifference,
+          transactionTypeId: InventoryTransaction.TRANSACTION_TYPES.ADJUSTMENT
+        });
+      }
+      
+      return rows[0];
+    });
   }
 
   static async delete(id, userId) {
-    const { rows } = await pool.query(
-      `DELETE FROM public.products WHERE id=$1 AND user_id=$2 RETURNING *`,
-      [id, userId]
-    );
-    return rows[0];
+    return this.executeWithTransaction(async (client) => {
+      // Get current product to record quantity removal
+      const { rows: currentProduct } = await client.query(
+        `SELECT * FROM public.products WHERE id = $1 AND user_id = $2`,
+        [id, userId]
+      );
+      
+      if (currentProduct.length === 0) {
+        return null;
+      }
+      
+      const currentQuantity = currentProduct[0].quantity;
+      
+      // Record inventory transaction for removing all stock
+      if (currentQuantity > 0) {
+        await InventoryTransaction.recordTransaction(client, {
+          userId,
+          productId: id,
+          quantity: -currentQuantity, // Negative to remove all stock
+          transactionTypeId: InventoryTransaction.TRANSACTION_TYPES.LOSS
+        });
+      }
+      
+      // Delete the product
+      const { rows } = await client.query(
+        `DELETE FROM public.products WHERE id=$1 AND user_id=$2 RETURNING *`,
+        [id, userId]
+      );
+      
+      return rows[0];
+    });
   }
 
   // Check if product has sufficient stock
