@@ -8,6 +8,13 @@ const {
   updateSalesReturn,
   deleteSalesReturn
 } = require('../controllers/sales_returns_controller');
+const { 
+  createSalesReturnValidators,
+  updateSalesReturnValidators,
+  getSalesReturnValidator,
+  deleteSalesReturnValidator
+} = require('../validators/sales_return_validators');
+const { validateResult } = require('../utils/validate_util');
 
 router.use(verificarToken);
 
@@ -56,6 +63,7 @@ router.use(verificarToken);
  *                   required:
  *                     - productId
  *                     - quantity
+ *                     - statusId
  *                   properties:
  *                     productId:
  *                       type: integer
@@ -81,7 +89,7 @@ router.use(verificarToken);
  *       500:
  *         description: Error en el servidor
  */
-router.post('/', createSalesReturn);
+router.post('/', createSalesReturnValidators, validateResult, createSalesReturn);
 
 /**
  * @swagger
@@ -122,7 +130,7 @@ router.get('/', listSalesReturns);
  *       404:
  *         description: Devolución de venta no encontrada
  */
-router.get('/:id', getSalesReturn);
+router.get('/:id', getSalesReturnValidator, validateResult, getSalesReturn);
 
 /**
  * @swagger
@@ -166,6 +174,7 @@ router.get('/:id', getSalesReturn);
  *                   required:
  *                     - productId
  *                     - quantity
+ *                     - statusId
  *                   properties:
  *                     productId:
  *                       type: integer
@@ -187,7 +196,7 @@ router.get('/:id', getSalesReturn);
  *       404:
  *         description: Devolución de venta no encontrada
  */
-router.put('/:id', updateSalesReturn);
+router.put('/:id', updateSalesReturnValidators, validateResult, updateSalesReturn);
 
 /**
  * @swagger
@@ -212,6 +221,6 @@ router.put('/:id', updateSalesReturn);
  *       404:
  *         description: Devolución de venta no encontrada
  */
-router.delete('/:id', deleteSalesReturn);
+router.delete('/:id', deleteSalesReturnValidator, validateResult, deleteSalesReturn);
 
 module.exports = router;
