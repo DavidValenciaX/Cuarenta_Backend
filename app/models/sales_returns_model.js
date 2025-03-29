@@ -258,31 +258,37 @@ class SalesReturn {
   // Delete a sales return
   static async delete(id, userId) {
     return this.executeWithTransaction(async (client) => {
-      // Get all items from the sales return
+      // Get all items from the sales return including status_id
       const { rows: items } = await client.query(
-        `SELECT product_id, quantity FROM public.sales_return_products WHERE sales_return_id = $1`,
+        `SELECT srp.product_id, srp.quantity, srp.status_id, st.name as status_name
+         FROM public.sales_return_products srp
+         LEFT JOIN public.status_types st ON srp.status_id = st.id
+         WHERE srp.sales_return_id = $1`,
         [id]
       );
       
-      // Update inventory for each product (remove from stock) since all returns are considered confirmed
-      for (const { product_id, quantity } of items) {
-        const productResult = await client.query(
-          `UPDATE public.products SET quantity = quantity - $1 WHERE id = $2 AND user_id = $3 RETURNING quantity`,
-          [Number(quantity), product_id, userId]
-        );
-        
-        const currentStock = Number(productResult.rows[0].quantity);
-        const previousStock = currentStock + Number(quantity);
-        
-        // Record cancelled sale return transaction using centralized method
-        await InventoryTransaction.recordTransaction({
-          userId,
-          productId: product_id,
-          quantity: -Number(quantity),
-          transactionTypeId: 6, // CANCELLED_SALE_RETURN
-          previousStock,
-          newStock: currentStock
-        }, client);
+      // Update inventory only for products with "accepted" status
+      for (const { product_id, quantity, status_name } of items) {
+        // Only adjust inventory if status was "accepted"
+        if (status_name === 'accepted') {
+          const productResult = await client.query(
+            `UPDATE public.products SET quantity = quantity - $1 WHERE id = $2 AND user_id = $3 RETURNING quantity`,
+            [Number(quantity), product_id, userId]
+          );
+          
+          const currentStock = Number(productResult.rows[0].quantity);
+          const previousStock = currentStock + Number(quantity);
+          
+          // Record cancelled sale return transaction using centralized method
+          await InventoryTransaction.recordTransaction({
+            userId,
+            productId: product_id,
+            quantity: -Number(quantity),
+            transactionTypeId: 6, // CANCELLED_SALE_RETURN
+            previousStock,
+            newStock: currentStock
+          }, client);
+        }
       }
       
       // Delete the sales return (will cascade delete its items)
