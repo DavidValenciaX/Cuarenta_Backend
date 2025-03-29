@@ -165,7 +165,7 @@ class PurchaseOrder {
         throw new Error('No se puede cambiar una orden de compra de "confirmada" a "pendiente"');
       }
 
-      // Get existing items
+      // Get existing items without deleting them yet
       const { rows: oldItems } = await client.query(
         `SELECT product_id, quantity FROM public.purchase_order_products WHERE purchase_order_id = $1`,
         [id]
@@ -174,10 +174,46 @@ class PurchaseOrder {
       // Create a mapping of old items by product_id for quick lookup
       const oldItemsMap = {};
       oldItems.forEach(item => {
-        oldItemsMap[item.product_id] = item.quantity;
+        oldItemsMap[item.product_id] = Number(item.quantity);
       });
       
-      // Delete old items
+      // Create a mapping of new items by product_id
+      const newItemsMap = {};
+      if (items && items.length > 0) {
+        items.forEach(item => {
+          newItemsMap[item.productId] = Number(item.quantity);
+        });
+      }
+      
+      // Identify removed products (those in oldItems but not in newItems)
+      if (oldStatusName === 'confirmed') {
+        for (const oldItem of oldItems) {
+          const productId = oldItem.product_id;
+          // If product was in old order but not in new order, remove from inventory
+          if (!newItemsMap[productId]) {
+            const quantity = Number(oldItem.quantity);
+            const productResult = await client.query(
+              `UPDATE public.products SET quantity = quantity - $1 WHERE id = $2 AND user_id = $3 RETURNING quantity`,
+              [quantity, productId, userId]
+            );
+            
+            const currentStock = Number(productResult.rows[0].quantity);
+            const previousStock = currentStock + quantity;
+            
+            // Record the inventory reduction
+            await InventoryTransaction.recordTransaction({
+              userId,
+              productId,
+              quantity: -quantity, // Negative as we're removing from inventory
+              transactionTypeId: 2, // CANCELLED_PURCHASE_ORDER
+              previousStock,
+              newStock: currentStock
+            }, client);
+          }
+        }
+      }
+      
+      // Now we can delete old items
       await client.query(
         `DELETE FROM public.purchase_order_products WHERE purchase_order_id = $1`,
         [id]
@@ -213,7 +249,6 @@ class PurchaseOrder {
       // If items are provided, add new items
       if (items && items.length > 0) {
         for (const item of items) {
-
           // Insert the purchase order product
           await client.query(
             `INSERT INTO public.purchase_order_products(purchase_order_id, product_id, quantity, unit_cost)
@@ -221,12 +256,35 @@ class PurchaseOrder {
             [purchaseOrder.id, item.productId, item.quantity, item.unitCost]
           );
           
-          // Update inventory based on new status
+          const newQuantity = Number(item.quantity);
+          const oldQuantity = oldItemsMap[item.productId] || 0;
+          
+          // Handle inventory updates based on status changes and product presence
           if (newStatusName === 'confirmed') {
-            // If old status was also confirmed, only add the difference to inventory
-            if (oldStatusName === 'confirmed') {
-              const oldQuantity = Number(oldItemsMap[item.productId] || 0);
-              const quantityDifference = Number(item.quantity) - oldQuantity;
+            // Case 1: Product was not in old order but is in new order
+            if (!oldItemsMap[item.productId]) {
+              // Add full quantity to inventory (new product in confirmed order)
+              const productResult = await client.query(
+                `UPDATE public.products SET quantity = quantity + $1 WHERE id = $2 AND user_id = $3 RETURNING quantity`,
+                [newQuantity, item.productId, userId]
+              );
+              
+              const currentStock = Number(productResult.rows[0].quantity);
+              const previousStock = currentStock - newQuantity;
+              
+              await InventoryTransaction.recordTransaction({
+                userId,
+                productId: item.productId,
+                quantity: newQuantity,
+                transactionTypeId: 1, // CONFIRMED_PURCHASE_ORDER
+                previousStock,
+                newStock: currentStock
+              }, client);
+            }
+            // Case 2: Product was in old order and old order was confirmed
+            else if (oldStatusName === 'confirmed') {
+              // Only adjust the difference in quantities
+              const quantityDifference = newQuantity - oldQuantity;
               
               if (quantityDifference !== 0) {
                 const productResult = await client.query(
@@ -235,9 +293,8 @@ class PurchaseOrder {
                 );
                 
                 const currentStock = Number(productResult.rows[0].quantity);
-                const previousStock = currentStock - Number(quantityDifference);
-
-                // Record adjustment transaction using centralized method
+                const previousStock = currentStock - quantityDifference;
+                
                 await InventoryTransaction.recordTransaction({
                   userId,
                   productId: item.productId,
@@ -247,27 +304,29 @@ class PurchaseOrder {
                   newStock: currentStock
                 }, client);
               }
-            } else {
-              // If changing from another status to confirmed, add full quantity
+            }
+            // Case 3: Product was in old order but old order was pending, new order is confirmed
+            else if (oldStatusName === 'pending') {
+              // Add full quantity to inventory (status changed from pending to confirmed)
               const productResult = await client.query(
                 `UPDATE public.products SET quantity = quantity + $1 WHERE id = $2 AND user_id = $3 RETURNING quantity`,
-                [Number(item.quantity), item.productId, userId]
+                [newQuantity, item.productId, userId]
               );
               
               const currentStock = Number(productResult.rows[0].quantity);
-              const previousStock = currentStock - Number(item.quantity);
-
-              // Record confirmed purchase order using centralized method
+              const previousStock = currentStock - newQuantity;
+              
               await InventoryTransaction.recordTransaction({
                 userId,
                 productId: item.productId,
-                quantity: Number(item.quantity),
+                quantity: newQuantity,
                 transactionTypeId: 1, // CONFIRMED_PURCHASE_ORDER
                 previousStock,
                 newStock: currentStock
               }, client);
             }
             
+            // Update unit cost if higher than current
             const { rows: productInfo } = await client.query(
               `SELECT unit_cost FROM public.products WHERE id = $1 AND user_id = $2`,
               [item.productId, userId]
@@ -280,6 +339,7 @@ class PurchaseOrder {
               );
             }
           }
+          // If both old and new status are 'pending', no inventory changes needed
         }
       }
       
