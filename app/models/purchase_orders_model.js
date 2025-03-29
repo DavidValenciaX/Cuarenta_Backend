@@ -1,4 +1,5 @@
 const pool = require('../config/data_base');
+const InventoryTransaction = require('./inventory_transactions_model');
 
 class PurchaseOrder {
   // Utility method to execute operations within a transaction
@@ -68,13 +69,14 @@ class PurchaseOrder {
             const currentStock = Number(productResult.rows[0].quantity);
             const previousStock = currentStock - Number(item.quantity);
             
-            await client.query(
-              `INSERT INTO public.inventory_transactions(
-                user_id, product_id, quantity, transaction_type_id, 
-                previous_stock, new_stock
-              ) VALUES($1, $2, $3, $4, $5, $6)`,
-              [userId, item.productId, Number(item.quantity), 1, previousStock, currentStock]
-            );
+            await InventoryTransaction.recordTransaction({
+              userId,
+              productId: item.productId,
+              quantity: Number(item.quantity),
+              transactionTypeId: 1, // CONFIRMED_PURCHASE_ORDER
+              previousStock,
+              newStock: currentStock
+            }, client);
             
             const currentUnitCost = Number(productResult.rows[0].unit_cost);
             
@@ -235,14 +237,15 @@ class PurchaseOrder {
                 const currentStock = Number(productResult.rows[0].quantity);
                 const previousStock = currentStock - Number(quantityDifference);
 
-                // Direct SQL insert for adjustment transaction
-                await client.query(
-                  `INSERT INTO public.inventory_transactions(
-                    user_id, product_id, quantity, transaction_type_id, 
-                    previous_stock, new_stock
-                  ) VALUES($1, $2, $3, $4, $5, $6)`,
-                  [userId, item.productId, quantityDifference, 9, previousStock, currentStock]
-                );
+                // Record adjustment transaction using centralized method
+                await InventoryTransaction.recordTransaction({
+                  userId,
+                  productId: item.productId,
+                  quantity: quantityDifference,
+                  transactionTypeId: 9, // ADJUSTMENT
+                  previousStock,
+                  newStock: currentStock
+                }, client);
               }
             } else {
               // If changing from another status to confirmed, add full quantity
@@ -254,14 +257,15 @@ class PurchaseOrder {
               const currentStock = Number(productResult.rows[0].quantity);
               const previousStock = currentStock - Number(item.quantity);
 
-              // Direct SQL insert for confirmed purchase order
-              await client.query(
-                `INSERT INTO public.inventory_transactions(
-                  user_id, product_id, quantity, transaction_type_id, 
-                  previous_stock, new_stock
-                ) VALUES($1, $2, $3, $4, $5, $6)`,
-                [userId, item.productId, Number(item.quantity), 1, previousStock, currentStock]
-              );
+              // Record confirmed purchase order using centralized method
+              await InventoryTransaction.recordTransaction({
+                userId,
+                productId: item.productId,
+                quantity: Number(item.quantity),
+                transactionTypeId: 1, // CONFIRMED_PURCHASE_ORDER
+                previousStock,
+                newStock: currentStock
+              }, client);
             }
             
             const { rows: productInfo } = await client.query(
@@ -317,14 +321,15 @@ class PurchaseOrder {
           const currentStock = Number(productResult.rows[0].quantity);
           const previousStock = currentStock + Number(quantity);
 
-          // Direct SQL insert for cancelled purchase order
-          await client.query(
-            `INSERT INTO public.inventory_transactions(
-              user_id, product_id, quantity, transaction_type_id, 
-              previous_stock, new_stock
-            ) VALUES($1, $2, $3, $4, $5, $6)`,
-            [userId, product_id, -quantity, 2, previousStock, currentStock]
-          );
+          // Record cancelled purchase order using centralized method
+          await InventoryTransaction.recordTransaction({
+            userId,
+            productId: product_id,
+            quantity: -quantity, // Note the negative sign
+            transactionTypeId: 2, // CANCELLED_PURCHASE_ORDER
+            previousStock,
+            newStock: currentStock
+          }, client);
         }
       }
       

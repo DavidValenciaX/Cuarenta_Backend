@@ -1,4 +1,5 @@
 const pool = require('../config/data_base');
+const InventoryTransaction = require('./inventory_transactions_model');
 
 class SalesReturn {
   // Utility method to execute operations within a transaction
@@ -59,17 +60,18 @@ class SalesReturn {
               throw new Error(`No se pudo actualizar inventario para producto ${item.productId}`);
             }
             
-            // Direct SQL insert for sale return transaction
             const currentStock = Number(productResult.rows[0].quantity);
             const previousStock = currentStock - Number(item.quantity);
             
-            await client.query(
-              `INSERT INTO public.inventory_transactions(
-                user_id, product_id, quantity, transaction_type_id, 
-                previous_stock, new_stock
-              ) VALUES($1, $2, $3, $4, $5, $6)`,
-              [userId, item.productId, Number(item.quantity), 5, previousStock, currentStock]
-            );
+            // Record the transaction using the centralized method
+            await InventoryTransaction.recordTransaction({
+              userId, 
+              productId: item.productId, 
+              quantity: Number(item.quantity), 
+              transactionTypeId: 5, // SALE_RETURN
+              previousStock,
+              newStock: currentStock
+            }, client);
           } catch (error) {
             // Handle unique constraint violation
             if (error.code === '23505') { // unique_violation PostgreSQL error code
@@ -146,7 +148,6 @@ class SalesReturn {
       });
       
       // Since all returns are considered confirmed, we need to reverse previous inventory changes
-      // before applying new ones
       for (const item of oldItems) {
         const productResult = await client.query(
           `UPDATE public.products SET quantity = quantity - $1 WHERE id = $2 AND user_id = $3 RETURNING quantity`,
@@ -156,14 +157,15 @@ class SalesReturn {
         const currentStock = Number(productResult.rows[0].quantity);
         const previousStock = currentStock + Number(item.quantity);
         
-        // Direct SQL insert for adjustment transaction
-        await client.query(
-          `INSERT INTO public.inventory_transactions(
-            user_id, product_id, quantity, transaction_type_id, 
-            previous_stock, new_stock
-          ) VALUES($1, $2, $3, $4, $5, $6)`,
-          [userId, item.product_id, -Number(item.quantity), 9, previousStock, currentStock]
-        );
+        // Record adjustment transaction using centralized method
+        await InventoryTransaction.recordTransaction({
+          userId,
+          productId: item.product_id,
+          quantity: -Number(item.quantity),
+          transactionTypeId: 9, // ADJUSTMENT
+          previousStock,
+          newStock: currentStock
+        }, client);
       }
       
       // Delete old items
@@ -221,14 +223,15 @@ class SalesReturn {
             const currentStock = Number(productResult.rows[0].quantity);
             const previousStock = currentStock - Number(item.quantity);
             
-            // Direct SQL insert for sale return transaction
-            await client.query(
-              `INSERT INTO public.inventory_transactions(
-                user_id, product_id, quantity, transaction_type_id, 
-                previous_stock, new_stock
-              ) VALUES($1, $2, $3, $4, $5, $6)`,
-              [userId, item.productId, Number(item.quantity), 5, previousStock, currentStock]
-            );
+            // Record sale return transaction using centralized method
+            await InventoryTransaction.recordTransaction({
+              userId,
+              productId: item.productId,
+              quantity: Number(item.quantity),
+              transactionTypeId: 5, // SALE_RETURN
+              previousStock,
+              newStock: currentStock
+            }, client);
           } catch (error) {
             // Handle unique constraint violation
             if (error.code === '23505') {
@@ -262,14 +265,15 @@ class SalesReturn {
         const currentStock = Number(productResult.rows[0].quantity);
         const previousStock = currentStock + Number(quantity);
         
-        // Direct SQL insert for cancelled sale return transaction
-        await client.query(
-          `INSERT INTO public.inventory_transactions(
-            user_id, product_id, quantity, transaction_type_id, 
-            previous_stock, new_stock
-          ) VALUES($1, $2, $3, $4, $5, $6)`,
-          [userId, product_id, -Number(quantity), 6, previousStock, currentStock]
-        );
+        // Record cancelled sale return transaction using centralized method
+        await InventoryTransaction.recordTransaction({
+          userId,
+          productId: product_id,
+          quantity: -Number(quantity),
+          transactionTypeId: 6, // CANCELLED_SALE_RETURN
+          previousStock,
+          newStock: currentStock
+        }, client);
       }
       
       // Delete the sales return (will cascade delete its items)

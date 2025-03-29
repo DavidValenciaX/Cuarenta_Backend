@@ -1,4 +1,5 @@
 const pool = require('../config/data_base');
+const InventoryTransaction = require('./inventory_transactions_model');
 
 class Product {
   
@@ -19,14 +20,15 @@ class Product {
       
       // Then record transaction BEFORE updating the quantity
       if (Number(quantity) > 0) {
-        // Record the transaction directly with explicit previous_stock=0
-        await client.query(
-          `INSERT INTO public.inventory_transactions(
-            user_id, product_id, quantity, transaction_type_id, 
-            previous_stock, new_stock
-          ) VALUES($1, $2, $3, $4, $5, $6)`,
-          [userId, rows[0].id, Number(quantity), 9, initialQuantity, Number(quantity)]
-        );
+        // Record the transaction using centralized method
+        await InventoryTransaction.recordTransaction({
+          userId,
+          productId: rows[0].id,
+          quantity: Number(quantity),
+          transactionTypeId: 9, // ADJUSTMENT
+          previousStock: initialQuantity,
+          newStock: Number(quantity)
+        }, client);
         
         // Then update the quantity
         await client.query(
@@ -108,14 +110,15 @@ class Product {
       if (rows.length > 0 && oldQuantity !== newQuantity) {
         const quantityDifference = newQuantity - oldQuantity;
         
-        // Directly insert the transaction record
-        await client.query(
-          `INSERT INTO public.inventory_transactions(
-            user_id, product_id, quantity, transaction_type_id, 
-            previous_stock, new_stock
-          ) VALUES($1, $2, $3, $4, $5, $6)`,
-          [userId, id, Number(quantityDifference), 9, oldQuantity, newQuantity]
-        );
+        // Record transaction using centralized method
+        await InventoryTransaction.recordTransaction({
+          userId,
+          productId: id,
+          quantity: Number(quantityDifference),
+          transactionTypeId: 9, // ADJUSTMENT
+          previousStock: oldQuantity,
+          newStock: newQuantity
+        }, client);
       }
       
       return rows[0];
@@ -173,16 +176,17 @@ class Product {
         return null;
       }
       
-      // Record inventory transaction directly
+      // Record inventory transaction using centralized method
       const transactionType = adjustmentQty < 0 ? 10 : 9; // 10=LOSS, 9=ADJUSTMENT
       
-      await client.query(
-        `INSERT INTO public.inventory_transactions(
-          user_id, product_id, quantity, transaction_type_id, 
-          previous_stock, new_stock
-        ) VALUES($1, $2, $3, $4, $5, $6)`,
-        [userId, id, adjustmentQty, transactionType, previousStock, newStock]
-      );
+      await InventoryTransaction.recordTransaction({
+        userId,
+        productId: id,
+        quantity: adjustmentQty,
+        transactionTypeId: transactionType,
+        previousStock,
+        newStock
+      }, client);
       
       return rows[0];
     });

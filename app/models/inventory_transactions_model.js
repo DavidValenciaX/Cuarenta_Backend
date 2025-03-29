@@ -15,44 +15,43 @@ class InventoryTransaction {
     LOSS: 10,
   };
 
-  // Record an inventory transaction with correct previous and new stock values
-  static async recordTransaction(client, data) {
-    const { userId, productId, quantity, transactionTypeId, previousStock: providedPreviousStock, newStock: providedNewStock } = data;
-    
-    let previousStock, newStock;
-    
-    // If previousStock and newStock are provided, use them
-    if (providedPreviousStock !== undefined && providedNewStock !== undefined) {
-      previousStock = Number(providedPreviousStock);
-      newStock = Number(providedNewStock);
-    } else {
-      // Otherwise query the current stock level from products table
-      const { rows } = await client.query(
-        `SELECT quantity FROM public.products WHERE id = $1 AND user_id = $2`,
-        [productId, userId]
-      );
-      
-      if (rows.length === 0) {
-        throw new Error(`Product with ID ${productId} not found`);
-      }
-      
-      // Get the current stock level
-      previousStock = Number(rows[0].quantity);
-      
-      // Calculate the new stock level
-      newStock = previousStock + Number(quantity);
-    }
-    
-    // Insert the transaction with accurate stock levels
-    const result = await client.query(
-      `INSERT INTO public.inventory_transactions(
+  /**
+   * Records an inventory transaction
+   * @param {Object} transaction - The transaction details
+   * @param {number} transaction.userId - User ID
+   * @param {number} transaction.productId - Product ID
+   * @param {number} transaction.quantity - Quantity change (positive or negative)
+   * @param {number} transaction.transactionTypeId - Transaction type ID
+   * @param {number} transaction.previousStock - Previous stock level
+   * @param {number} transaction.newStock - New stock level
+   * @param {Object} [client] - Optional database client for transaction support
+   * @returns {Promise<Object>} The created transaction
+   */
+  static async recordTransaction({
+    userId, 
+    productId, 
+    quantity, 
+    transactionTypeId, 
+    previousStock, 
+    newStock
+  }, client = null) {
+    const query = `
+      INSERT INTO public.inventory_transactions(
         user_id, product_id, quantity, transaction_type_id, 
         previous_stock, new_stock
-      ) VALUES($1, $2, $3, $4, $5, $6) RETURNING *`,
-      [userId, productId, Number(quantity), transactionTypeId, previousStock, newStock]
-    );
+      ) VALUES($1, $2, $3, $4, $5, $6)
+      RETURNING *`;
+    const values = [userId, productId, Number(quantity), transactionTypeId, previousStock, newStock];
     
-    return result.rows[0];
+    // If a client is provided, use it (for transaction support)
+    if (client) {
+      const { rows } = await client.query(query, values);
+      return rows[0];
+    } else {
+      // Otherwise use the pool directly
+      const { rows } = await pool.query(query, values);
+      return rows[0];
+    }
   }
 
   static async getTransactionHistoryByProduct(productId, userId) {
