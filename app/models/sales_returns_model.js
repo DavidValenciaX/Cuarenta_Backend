@@ -21,6 +21,63 @@ class SalesReturn {
   // Create a sales return with its items
   static async create({ userId, salesOrderId, notes, returnDate, items }) {
     return this.executeWithTransaction(async (client) => {
+      // Validate that the sales order exists and belongs to the user
+      const salesOrderResult = await client.query(
+        `SELECT * FROM public.sales_orders WHERE id = $1 AND user_id = $2`,
+        [salesOrderId, userId]
+      );
+      
+      if (salesOrderResult.rows.length === 0) {
+        throw new Error("Orden de venta no encontrada o no pertenece al usuario");
+      }
+      
+      // Get all products from the sales order to validate return quantities
+      const salesOrderItemsResult = await client.query(
+        `SELECT product_id, quantity FROM public.sales_order_products WHERE sales_order_id = $1`,
+        [salesOrderId]
+      );
+      
+      // Create a map of product quantities from the sales order
+      const orderQuantityMap = {};
+      salesOrderItemsResult.rows.forEach(item => {
+        orderQuantityMap[item.product_id] = Number(item.quantity);
+      });
+      
+      // Get all existing returns for this sales order to check cumulative return quantities
+      const existingReturnsResult = await client.query(
+        `SELECT srp.product_id, srp.quantity 
+         FROM public.sales_return_products srp
+         JOIN public.sales_returns sr ON srp.sales_return_id = sr.id
+         WHERE sr.sales_order_id = $1`,
+        [salesOrderId]
+      );
+      
+      // Calculate already returned quantities by product
+      const returnedQuantityMap = {};
+      existingReturnsResult.rows.forEach(item => {
+        const productId = item.product_id;
+        returnedQuantityMap[productId] = (returnedQuantityMap[productId] || 0) + Number(item.quantity);
+      });
+      
+      // Validate each item in the current return
+      if (items && items.length > 0) {
+        for (const item of items) {
+          // Check if product was in the original order
+          if (!orderQuantityMap[item.productId]) {
+            throw new Error(`El producto ${item.productId} no está en la orden de venta original`);
+          }
+          
+          const orderedQty = orderQuantityMap[item.productId];
+          const previouslyReturned = returnedQuantityMap[item.productId] || 0;
+          const availableToReturn = orderedQty - previouslyReturned;
+          
+          // Check if return quantity exceeds available quantity
+          if (Number(item.quantity) > availableToReturn) {
+            throw new Error(`La cantidad de devolución para el producto ${item.productId} excede la cantidad disponible para devolver. Máximo: ${availableToReturn}`);
+          }
+        }
+      }
+      
       // Insert the sales return record - status is no longer needed as all returns are confirmed
       const salesReturnResult = await client.query(
         `INSERT INTO public.sales_returns(
@@ -142,6 +199,53 @@ class SalesReturn {
       const existingSalesReturn = await this.findById(id, userId);
       if (!existingSalesReturn) {
         return null;
+      }
+
+      // Get all products from the sales order to validate return quantities
+      const salesOrderItemsResult = await client.query(
+        `SELECT product_id, quantity FROM public.sales_order_products WHERE sales_order_id = $1`,
+        [salesOrderId]
+      );
+      
+      // Create a map of product quantities from the sales order
+      const orderQuantityMap = {};
+      salesOrderItemsResult.rows.forEach(item => {
+        orderQuantityMap[item.product_id] = Number(item.quantity);
+      });
+      
+      // Get all existing returns for this sales order EXCLUDING the current one being updated
+      const existingReturnsResult = await client.query(
+        `SELECT srp.product_id, srp.quantity 
+         FROM public.sales_return_products srp
+         JOIN public.sales_returns sr ON srp.sales_return_id = sr.id
+         WHERE sr.sales_order_id = $1 AND sr.id != $2`,
+        [salesOrderId, id]
+      );
+      
+      // Calculate already returned quantities by product
+      const returnedQuantityMap = {};
+      existingReturnsResult.rows.forEach(item => {
+        const productId = item.product_id;
+        returnedQuantityMap[productId] = (returnedQuantityMap[productId] || 0) + Number(item.quantity);
+      });
+      
+      // Validate each item in the current return update
+      if (items && items.length > 0) {
+        for (const item of items) {
+          // Check if product was in the original order
+          if (!orderQuantityMap[item.productId]) {
+            throw new Error(`El producto ${item.productId} no está en la orden de venta original`);
+          }
+          
+          const orderedQty = orderQuantityMap[item.productId];
+          const previouslyReturned = returnedQuantityMap[item.productId] || 0;
+          const availableToReturn = orderedQty - previouslyReturned;
+          
+          // Check if return quantity exceeds available quantity
+          if (Number(item.quantity) > availableToReturn) {
+            throw new Error(`La cantidad de devolución para el producto ${item.productId} excede la cantidad disponible para devolver. Máximo: ${availableToReturn}`);
+          }
+        }
       }
 
       // Get existing items including status information
