@@ -68,19 +68,6 @@ class InventoryTransaction {
     return rows;
   }
 
-  static async getTransactionHistory(userId) {
-    const { rows } = await pool.query(
-      `SELECT it.*, tt.name as transaction_type_name, p.name as product_name
-       FROM public.inventory_transactions it
-       JOIN public.transaction_types tt ON it.transaction_type_id = tt.id
-       JOIN public.products p ON it.product_id = p.id
-       WHERE it.user_id = $1
-       ORDER BY it.created_at DESC`,
-      [userId]
-    );
-    return rows;
-  }
-
   static async getUserTransactions(userId, limit, offset) {
     const { rows } = await pool.query(
       `SELECT it.*, tt.name as transaction_type_name, p.name as product_name

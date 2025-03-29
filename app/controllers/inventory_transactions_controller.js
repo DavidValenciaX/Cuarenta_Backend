@@ -14,7 +14,8 @@ async function getProductTransactions(req, res) {
       return sendResponse(res, 404, 'error', 'Producto no encontrado');
     }
     
-    const transactions = await InventoryTransaction.getProductTransactions(productId, userId);
+    // Changed from getProductTransactions to getTransactionHistoryByProduct
+    const transactions = await InventoryTransaction.getTransactionHistoryByProduct(productId, userId);
     return sendResponse(res, 200, 'success', 'Historial de transacciones obtenido', {
       product,
       transactions
