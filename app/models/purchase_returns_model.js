@@ -276,9 +276,15 @@ class PurchaseReturn {
       
       // Delete the purchase return (will cascade delete its items)
       const { rows } = await client.query(
-        `DELETE FROM public.purchase_returns WHERE id = $1 AND user_id = $2 RETURNING *`,
+        `DELETE FROM public.purchase_returns 
+         WHERE id = $1 AND user_id = $2 
+         RETURNING *`,
         [id, userId]
       );
+      
+      if (rows.length === 0) {
+        return null; // Return null if nothing was deleted (not found or not authorized)
+      }
       
       return rows[0];
     });

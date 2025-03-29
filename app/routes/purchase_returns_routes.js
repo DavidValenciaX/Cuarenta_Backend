@@ -1,6 +1,12 @@
 const express = require('express');
 const router = express.Router();
 const { verificarToken } = require('../middlewares/auth_middleware');
+const { validateResult } = require('../utils/validate_util');
+const {
+  createPurchaseReturnValidator,
+  updatePurchaseReturnValidator,
+  idParamValidator
+} = require('../validators/purchase_return_validators');
 const {
   createPurchaseReturn,
   listPurchaseReturns,
@@ -77,7 +83,7 @@ router.use(verificarToken);
  *       500:
  *         description: Error en el servidor
  */
-router.post('/', createPurchaseReturn);
+router.post('/', createPurchaseReturnValidator, validateResult, createPurchaseReturn);
 
 /**
  * @swagger
@@ -118,7 +124,7 @@ router.get('/', listPurchaseReturns);
  *       404:
  *         description: Devolución de compra no encontrada
  */
-router.get('/:id', getPurchaseReturn);
+router.get('/:id', idParamValidator, validateResult, getPurchaseReturn);
 
 /**
  * @swagger
@@ -179,7 +185,7 @@ router.get('/:id', getPurchaseReturn);
  *       404:
  *         description: Devolución de compra no encontrada
  */
-router.put('/:id', updatePurchaseReturn);
+router.put('/:id', updatePurchaseReturnValidator, validateResult, updatePurchaseReturn);
 
 /**
  * @swagger
@@ -204,6 +210,6 @@ router.put('/:id', updatePurchaseReturn);
  *       404:
  *         description: Devolución de compra no encontrada
  */
-router.delete('/:id', deletePurchaseReturn);
+router.delete('/:id', idParamValidator, validateResult, deletePurchaseReturn);
 
 module.exports = router;
