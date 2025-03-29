@@ -144,46 +144,71 @@ class SalesReturn {
         return null;
       }
 
-      // Get existing items
+      // Get existing items including status information
       const { rows: oldItems } = await client.query(
-        `SELECT product_id, quantity FROM public.sales_return_products WHERE sales_return_id = $1`,
+        `SELECT product_id, quantity, status_id, (SELECT name FROM public.status_types WHERE id = status_id) as status_name 
+         FROM public.sales_return_products 
+         WHERE sales_return_id = $1`,
         [id]
       );
       
-      // Create a mapping of old items by product_id for quick lookup
+      // Create a mapping of old items by product_id for quick lookup - include status
       const oldItemsMap = {};
       oldItems.forEach(item => {
-        oldItemsMap[item.product_id] = item.quantity;
+        oldItemsMap[item.product_id] = {
+          quantity: item.quantity,
+          statusId: item.status_id,
+          statusName: item.status_name
+        };
       });
       
-      // Since all returns are considered confirmed, we need to reverse previous inventory changes
-      for (const item of oldItems) {
-        const productResult = await client.query(
-          `UPDATE public.products SET quantity = quantity - $1 WHERE id = $2 AND user_id = $3 RETURNING quantity`,
-          [Number(item.quantity), item.product_id, userId]
-        );
-        
-        const currentStock = Number(productResult.rows[0].quantity);
-        const previousStock = currentStock + Number(item.quantity);
-        
-        // Record adjustment transaction using centralized method
-        await InventoryTransaction.recordTransaction({
-          userId,
-          productId: item.product_id,
-          quantity: -Number(item.quantity),
-          transactionTypeId: 9, // ADJUSTMENT
-          previousStock,
-          newStock: currentStock
-        }, client);
+      // Process new items to identify removals, additions, and modifications
+      const newItemsMap = {};
+      if (items && items.length > 0) {
+        items.forEach(item => {
+          newItemsMap[item.productId] = {
+            quantity: item.quantity,
+            statusId: item.statusId
+          };
+        });
       }
       
-      // Delete old items
+      // Handle removed items - reverse inventory only for previously accepted items
+      for (const oldProductId in oldItemsMap) {
+        if (!newItemsMap[oldProductId]) {
+          // Item was removed
+          const oldItem = oldItemsMap[oldProductId];
+          
+          // Only adjust inventory if status was "accepted"
+          if (oldItem.statusName === 'accepted') {
+            const productResult = await client.query(
+              `UPDATE public.products SET quantity = quantity - $1 WHERE id = $2 AND user_id = $3 RETURNING quantity`,
+              [Number(oldItem.quantity), oldProductId, userId]
+            );
+            
+            const currentStock = Number(productResult.rows[0].quantity);
+            const previousStock = currentStock + Number(oldItem.quantity);
+            
+            // Record adjustment transaction
+            await InventoryTransaction.recordTransaction({
+              userId,
+              productId: oldProductId,
+              quantity: -Number(oldItem.quantity),
+              transactionTypeId: 9, // ADJUSTMENT
+              previousStock,
+              newStock: currentStock
+            }, client);
+          }
+        }
+      }
+      
+      // Delete old items - we'll reinsert the ones that remain
       await client.query(
         `DELETE FROM public.sales_return_products WHERE sales_return_id = $1`,
         [id]
       );
       
-      // Build the update query - no more status_id
+      // Build the update query for sales return
       let updateQuery = `
         UPDATE public.sales_returns
         SET sales_order_id = $1, notes = $2
@@ -210,11 +235,81 @@ class SalesReturn {
       
       const salesReturn = salesReturnResult.rows[0];
       
-      // Add new items and update inventory
+      // Add new items and update inventory based on the business rules
       if (items && items.length > 0) {
         for (const item of items) {
           try {
-            // Insert the new item with status
+            // Get the status name for validation
+            const { rows: statusResult } = await client.query(
+              `SELECT name FROM public.status_types WHERE id = $1`,
+              [item.statusId]
+            );
+            
+            if (statusResult.length === 0) {
+              throw new Error(`Estado inválido para el producto ${item.productId}`);
+            }
+            
+            const newStatusName = statusResult[0].name;
+            const oldItem = oldItemsMap[item.productId];
+            
+            // Validate status transitions if this is an existing item
+            if (oldItem) {
+              // Prevent invalid status transitions
+              if (oldItem.statusName === 'accepted' && 
+                  (newStatusName === 'under_review' || newStatusName === 'damaged')) {
+                throw new Error(`No se permite cambiar el estado de 'accepted' a '${newStatusName}' para el producto ${item.productId}`);
+              }
+              
+              if (oldItem.statusName === 'damaged' && 
+                  (newStatusName === 'under_review' || newStatusName === 'accepted')) {
+                throw new Error(`No se permite cambiar el estado de 'damaged' a '${newStatusName}' para el producto ${item.productId}`);
+              }
+              
+              // Handle inventory updates for status changes
+              if (oldItem.statusName === 'under_review' && newStatusName === 'accepted') {
+                // If status changes from under_review to accepted, add to inventory
+                const productResult = await client.query(
+                  `UPDATE public.products SET quantity = quantity + $1 WHERE id = $2 AND user_id = $3 RETURNING quantity`,
+                  [Number(item.quantity), item.productId, userId]
+                );
+                
+                const currentStock = Number(productResult.rows[0].quantity);
+                const previousStock = currentStock - Number(item.quantity);
+                
+                // Record sale return transaction
+                await InventoryTransaction.recordTransaction({
+                  userId,
+                  productId: item.productId,
+                  quantity: Number(item.quantity),
+                  transactionTypeId: 5, // SALE_RETURN
+                  previousStock,
+                  newStock: currentStock
+                }, client);
+              }
+            } else {
+              // This is a new item - only add to inventory if status is 'accepted'
+              if (newStatusName === 'accepted') {
+                const productResult = await client.query(
+                  `UPDATE public.products SET quantity = quantity + $1 WHERE id = $2 AND user_id = $3 RETURNING quantity`,
+                  [Number(item.quantity), item.productId, userId]
+                );
+                
+                const currentStock = Number(productResult.rows[0].quantity);
+                const previousStock = currentStock - Number(item.quantity);
+                
+                // Record sale return transaction
+                await InventoryTransaction.recordTransaction({
+                  userId,
+                  productId: item.productId,
+                  quantity: Number(item.quantity),
+                  transactionTypeId: 5, // SALE_RETURN
+                  previousStock,
+                  newStock: currentStock
+                }, client);
+              }
+            }
+            
+            // Insert the new or updated item with status
             await client.query(
               `INSERT INTO public.sales_return_products(
                 sales_return_id, product_id, quantity, status_id
@@ -222,25 +317,6 @@ class SalesReturn {
               VALUES ($1, $2, $3, $4)`,
               [id, item.productId, item.quantity, item.statusId]
             );
-            
-            // Always update inventory since all returns are confirmed
-            const productResult = await client.query(
-              `UPDATE public.products SET quantity = quantity + $1 WHERE id = $2 AND user_id = $3 RETURNING quantity`,
-              [Number(item.quantity), item.productId, userId]
-            );
-            
-            const currentStock = Number(productResult.rows[0].quantity);
-            const previousStock = currentStock - Number(item.quantity);
-            
-            // Record sale return transaction using centralized method
-            await InventoryTransaction.recordTransaction({
-              userId,
-              productId: item.productId,
-              quantity: Number(item.quantity),
-              transactionTypeId: 5, // SALE_RETURN
-              previousStock,
-              newStock: currentStock
-            }, client);
           } catch (error) {
             // Handle unique constraint violation
             if (error.code === '23505') {
