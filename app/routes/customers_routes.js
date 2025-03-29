@@ -8,6 +8,8 @@ const {
   updateCustomer,
   deleteCustomer
 } = require('../controllers/customers_controller');
+const { createCustomerValidator, updateCustomerValidator } = require('../validators/customers_validators');
+const { validateResult } = require('../utils/validate_util');
 
 router.use(verificarToken);
 
@@ -61,7 +63,7 @@ router.use(verificarToken);
  *       401:
  *         description: Token inválido o expirado
  */
-router.post('/', createCustomer);
+router.post('/', createCustomerValidator, validateResult, createCustomer);
 
 /**
  * @swagger
@@ -154,7 +156,7 @@ router.get('/:id', getCustomer);
  *       401:
  *         description: Token inválido o expirado
  */
-router.put('/:id', updateCustomer);
+router.put('/:id', updateCustomerValidator, validateResult, updateCustomer);
 
 /**
  * @swagger

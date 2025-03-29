@@ -9,9 +9,7 @@ async function createCustomer(req, res) {
   let { name, email, phone, address } = req.body;
   const userId = req.usuario.userId;
   
-  if (!name || !email || !phone || !address) 
-    return sendResponse(res, 400, 'error', 'Todos los campos son requeridos');
-
+  // Express-validator already validated required fields and formats
   name = normalize(name);
   email = email.trim();
 
@@ -41,9 +39,7 @@ async function updateCustomer(req, res) {
   const userId = req.usuario.userId;
   const id = Number(req.params.id);
   
-  if (!name || !email || !phone || !address)
-    return sendResponse(res, 400, 'error', 'Todos los campos son requeridos');
-  
+  // Express-validator already validated required fields and formats
   name = normalize(name);
   email = email.trim();
 
