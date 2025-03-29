@@ -2,6 +2,13 @@ const express = require('express');
 const router = express.Router();
 const { createUser,confirmEmail,loginUser,logoutUser,forgotPassword,resetPassword,getUserProfile } = require('../controllers/users_controller');
 const { verificarToken } = require('../middlewares/auth_middleware'); // Importar middleware
+const { 
+  validateRegistration, 
+  validateLogin, 
+  validateEmailConfirmation, 
+  validateForgotPassword,
+  validateResetPassword
+} = require('../validators/user_validators');
 
 /**
  * @swagger
@@ -69,7 +76,7 @@ const { verificarToken } = require('../middlewares/auth_middleware'); // Importa
  *                   type: string
  *                   example: 'Las contraseñas no coinciden'
  */
-router.post('/register', createUser);
+router.post('/register', validateRegistration, createUser);
 
 /**
  * @swagger
@@ -115,7 +122,7 @@ router.post('/register', createUser);
  *       500:
  *         description: Server error
  */
-router.post('/confirm-email', confirmEmail);
+router.post('/confirm-email', validateEmailConfirmation, confirmEmail);
 
 /**
  * @swagger
@@ -169,7 +176,7 @@ router.post('/confirm-email', confirmEmail);
  *       500:
  *         description: Server error
  */
-router.post('/login', loginUser);
+router.post('/login', validateLogin, loginUser);
 
 /**
  * @swagger
@@ -251,7 +258,7 @@ router.post('/logout', logoutUser);
  *       500:
  *         description: Server error
  */
-router.post('/forgot-password', forgotPassword);
+router.post('/forgot-password', validateForgotPassword, forgotPassword);
 
 /**
  * @swagger
@@ -291,7 +298,7 @@ router.post('/forgot-password', forgotPassword);
  *       500:
  *         description: Server error
  */
-router.post('/reset-password', resetPassword);
+router.post('/reset-password', validateResetPassword, resetPassword);
 
 router.get('/perfil', verificarToken, (req, res) => {
     res.json({ mensaje: 'Bienvenido, usuario autenticado', usuario: req.usuario });

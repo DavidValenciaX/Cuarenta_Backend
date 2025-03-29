@@ -1,9 +1,13 @@
-function validateEmail(email) {
-    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-  }
-  
-  function validatePhone(phone) {
-    return /^[0-9]+$/.test(phone);
-  }
-  
-  module.exports = { validateEmail, validatePhone };
+const { validationResult } = require('express-validator');
+
+const validateResult = (req, res, next) => {
+    try {
+        validationResult(req).throw()
+        return next()
+    } catch (err) {
+        res.status(403)
+        res.send({ errors: err.array() })
+    }
+}
+
+module.exports = { validateResult }

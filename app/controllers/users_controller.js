@@ -1,7 +1,6 @@
 const User = require('../models/users_model');
 const bcrypt = require('bcrypt');
 const crypto = require('crypto');
-const { validateEmail, validatePhone } = require('../utils/validate_util');
 const { sendResponse } = require('../utils/response_util');
 const { generateToken } = require('../utils/generate_token');
 const { addToBlacklist} = require('../utils/token_blacklist');
@@ -14,18 +13,7 @@ const moment = require('moment-timezone');
 //Funcion para crear usuario
 async function createUser(req, res) {
   try {
-    const { fullName, companyName, password, confirmPassword, email, phone } = req.body;
-
-    // Validaciones
-    if (password !== confirmPassword) {
-        return sendResponse(res, 400, 'error', 'Las contraseñas no coinciden');
-    }
-    if (!validateEmail(email)) {
-        return sendResponse(res, 400, 'error', 'Correo electrónico no válido');
-    }
-    if (!validatePhone(phone)) {
-        return sendResponse(res, 400, 'error', 'Número de teléfono no válido');
-    }
+    const { fullName, companyName, password, email, phone } = req.body;
 
     // Verificar si el correo ya está registrado
     const existingUser = await User.findByEmail(email);
@@ -64,10 +52,7 @@ async function createUser(req, res) {
 async function confirmEmail(req, res) {
     try {
       const { token } = req.body;
-      if (!token) {
-        return sendResponse(res, 400, 'error', 'Token requerido para confirmar el correo');
-      }
-  
+      
       const user = await User.findByConfirmationToken(token);
       if (!user) {
         return sendResponse(res, 404, 'error', 'Token inválido o usuario no encontrado');
@@ -94,10 +79,10 @@ async function confirmEmail(req, res) {
       console.error('Error in confirmEmail:', error);
       return sendResponse(res, 500, 'error', 'Ocurrió un error al confirmar el correo');
     }
-  }
+}
   
-  //Funcion para iniciar sesion
-  async function loginUser(req, res) {
+//Funcion para iniciar sesion
+async function loginUser(req, res) {
     try {
       const { email, password } = req.body;
 
