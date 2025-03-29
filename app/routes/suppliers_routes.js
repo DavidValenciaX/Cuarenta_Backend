@@ -1,6 +1,11 @@
 const express = require('express');
 const router = express.Router();
 const { verificarToken } = require('../middlewares/auth_middleware');
+const { validateResult } = require('../utils/validate_util');
+const { 
+  createSupplierValidation, 
+  updateSupplierValidation 
+} = require('../validators/suppliers_validators');
 const {
   createSupplier,
   listSuppliers,
@@ -61,7 +66,7 @@ router.use(verificarToken);
  *       401:
  *         description: Token inválido o expirado
  */
-router.post('/', createSupplier);
+router.post('/', createSupplierValidation, validateResult, createSupplier);
 
 /**
  * @swagger
@@ -144,7 +149,7 @@ router.get('/:id', getSupplier);
  *       401:
  *         description: Token inválido o expirado
  */
-router.put('/:id', updateSupplier);
+router.put('/:id', updateSupplierValidation, validateResult, updateSupplier);
 
 /**
  * @swagger
