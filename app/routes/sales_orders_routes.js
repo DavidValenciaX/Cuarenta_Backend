@@ -8,6 +8,11 @@ const {
   updateSalesOrder,
   deleteSalesOrder
 } = require('../controllers/sales_orders_controller');
+const {
+  validateCreateSalesOrder,
+  validateUpdateSalesOrder,
+  validateSalesOrderId
+} = require('../validators/sales_orders_validators');
 
 router.use(verificarToken);
 
@@ -77,7 +82,7 @@ router.use(verificarToken);
  *       500:
  *         description: Error en el servidor
  */
-router.post('/', createSalesOrder);
+router.post('/', validateCreateSalesOrder, createSalesOrder);
 
 /**
  * @swagger
@@ -118,7 +123,7 @@ router.get('/', listSalesOrders);
  *       404:
  *         description: Orden de venta no encontrada
  */
-router.get('/:id', getSalesOrder);
+router.get('/:id', validateSalesOrderId, getSalesOrder);
 
 /**
  * @swagger
@@ -183,7 +188,7 @@ router.get('/:id', getSalesOrder);
  *       404:
  *         description: Orden de venta no encontrada
  */
-router.put('/:id', updateSalesOrder);
+router.put('/:id', validateUpdateSalesOrder, updateSalesOrder);
 
 /**
  * @swagger
@@ -208,6 +213,6 @@ router.put('/:id', updateSalesOrder);
  *       404:
  *         description: Orden de venta no encontrada
  */
-router.delete('/:id', deleteSalesOrder);
+router.delete('/:id', validateSalesOrderId, deleteSalesOrder);
 
 module.exports = router;

@@ -10,7 +10,8 @@
     "nodemailer": "^6.10.0",
     "pg": "^8.14.1",
     "swagger-jsdoc": "^6.2.8",
-    "swagger-ui-express": "^5.0.1"
+    "swagger-ui-express": "^5.0.1",
+    "xss": "^1.0.15"
   },
   "devDependencies": {
     "nodemon": "^3.1.9",
