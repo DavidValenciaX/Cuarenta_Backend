@@ -132,7 +132,7 @@ class SalesReturn {
                 userId, 
                 productId: item.productId, 
                 quantity: Number(item.quantity), 
-                transactionTypeId: 5, // SALE_RETURN
+                transactionTypeId: InventoryTransaction.TRANSACTION_TYPES.SALE_RETURN,
                 previousStock,
                 newStock: currentStock
               }, client);
@@ -298,7 +298,7 @@ class SalesReturn {
               userId,
               productId: oldProductId,
               quantity: -Number(oldItem.quantity),
-              transactionTypeId: 9, // ADJUSTMENT
+              transactionTypeId: InventoryTransaction.TRANSACTION_TYPES.ADJUSTMENT,
               previousStock,
               newStock: currentStock
             }, client);
@@ -385,7 +385,7 @@ class SalesReturn {
                   userId,
                   productId: item.productId,
                   quantity: Number(item.quantity),
-                  transactionTypeId: 5, // SALE_RETURN
+                  transactionTypeId: InventoryTransaction.TRANSACTION_TYPES.SALE_RETURN,
                   previousStock,
                   newStock: currentStock
                 }, client);
@@ -406,7 +406,7 @@ class SalesReturn {
                   userId,
                   productId: item.productId,
                   quantity: Number(item.quantity),
-                  transactionTypeId: 5, // SALE_RETURN
+                  transactionTypeId: InventoryTransaction.TRANSACTION_TYPES.SALE_RETURN,
                   previousStock,
                   newStock: currentStock
                 }, client);
@@ -464,7 +464,7 @@ class SalesReturn {
             userId,
             productId: product_id,
             quantity: -Number(quantity),
-            transactionTypeId: 6, // CANCELLED_SALE_RETURN
+            transactionTypeId: InventoryTransaction.TRANSACTION_TYPES.CANCELLED_SALE_RETURN,
             previousStock,
             newStock: currentStock
           }, client);

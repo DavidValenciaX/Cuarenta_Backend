@@ -73,7 +73,7 @@ class PurchaseOrder {
               userId,
               productId: item.productId,
               quantity: Number(item.quantity),
-              transactionTypeId: 1, // CONFIRMED_PURCHASE_ORDER
+              transactionTypeId: InventoryTransaction.TRANSACTION_TYPES.CONFIRMED_PURCHASE_ORDER,
               previousStock,
               newStock: currentStock
             }, client);
@@ -205,7 +205,7 @@ class PurchaseOrder {
               userId,
               productId,
               quantity: -quantity, // Negative as we're removing from inventory
-              transactionTypeId: 2, // CANCELLED_PURCHASE_ORDER
+              transactionTypeId: InventoryTransaction.TRANSACTION_TYPES.CANCELLED_PURCHASE_ORDER,
               previousStock,
               newStock: currentStock
             }, client);
@@ -276,7 +276,7 @@ class PurchaseOrder {
                 userId,
                 productId: item.productId,
                 quantity: newQuantity,
-                transactionTypeId: 1, // CONFIRMED_PURCHASE_ORDER
+                transactionTypeId: InventoryTransaction.TRANSACTION_TYPES.CONFIRMED_PURCHASE_ORDER,
                 previousStock,
                 newStock: currentStock
               }, client);
@@ -299,7 +299,7 @@ class PurchaseOrder {
                   userId,
                   productId: item.productId,
                   quantity: quantityDifference,
-                  transactionTypeId: 9, // ADJUSTMENT
+                  transactionTypeId: InventoryTransaction.TRANSACTION_TYPES.ADJUSTMENT,
                   previousStock,
                   newStock: currentStock
                 }, client);
@@ -320,7 +320,7 @@ class PurchaseOrder {
                 userId,
                 productId: item.productId,
                 quantity: newQuantity,
-                transactionTypeId: 1, // CONFIRMED_PURCHASE_ORDER
+                transactionTypeId: InventoryTransaction.TRANSACTION_TYPES.CONFIRMED_PURCHASE_ORDER,
                 previousStock,
                 newStock: currentStock
               }, client);
@@ -386,7 +386,7 @@ class PurchaseOrder {
             userId,
             productId: product_id,
             quantity: -quantity, // Note the negative sign
-            transactionTypeId: 2, // CANCELLED_PURCHASE_ORDER
+            transactionTypeId: InventoryTransaction.TRANSACTION_TYPES.CANCELLED_PURCHASE_ORDER,
             previousStock,
             newStock: currentStock
           }, client);

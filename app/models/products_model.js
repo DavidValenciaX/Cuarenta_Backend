@@ -25,7 +25,7 @@ class Product {
           userId,
           productId: rows[0].id,
           quantity: Number(quantity),
-          transactionTypeId: 9, // ADJUSTMENT
+          transactionTypeId: InventoryTransaction.TRANSACTION_TYPES.ADJUSTMENT,
           previousStock: initialQuantity,
           newStock: Number(quantity)
         }, client);
@@ -115,7 +115,7 @@ class Product {
           userId,
           productId: id,
           quantity: Number(quantityDifference),
-          transactionTypeId: 9, // ADJUSTMENT
+          transactionTypeId: InventoryTransaction.TRANSACTION_TYPES.ADJUSTMENT,
           previousStock: oldQuantity,
           newStock: newQuantity
         }, client);
@@ -177,7 +177,9 @@ class Product {
       }
       
       // Record inventory transaction using centralized method
-      const transactionType = adjustmentQty < 0 ? 10 : 9; // 10=LOSS, 9=ADJUSTMENT
+      const transactionType = adjustmentQty < 0 ? 
+        InventoryTransaction.TRANSACTION_TYPES.LOSS : 
+        InventoryTransaction.TRANSACTION_TYPES.ADJUSTMENT;
       
       await InventoryTransaction.recordTransaction({
         userId,

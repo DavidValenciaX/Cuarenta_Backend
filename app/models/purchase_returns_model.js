@@ -68,7 +68,7 @@ class PurchaseReturn {
               userId,
               productId: item.productId,
               quantity: -Number(item.quantity),
-              transactionTypeId: 7, // PURCHASE_RETURN
+              transactionTypeId: InventoryTransaction.TRANSACTION_TYPES.PURCHASE_RETURN,
               previousStock,
               newStock: currentStock
             }, client);
@@ -160,7 +160,7 @@ class PurchaseReturn {
           userId,
           productId: item.product_id,
           quantity: item.quantity, // Note: This is positive in the original code
-          transactionTypeId: 9, // ADJUSTMENT
+          transactionTypeId: InventoryTransaction.TRANSACTION_TYPES.ADJUSTMENT,
           previousStock,
           newStock: currentStock
         }, client);
@@ -226,7 +226,7 @@ class PurchaseReturn {
               userId,
               productId: item.productId,
               quantity: -Number(item.quantity),
-              transactionTypeId: 7, // PURCHASE_RETURN
+              transactionTypeId: InventoryTransaction.TRANSACTION_TYPES.PURCHASE_RETURN,
               previousStock,
               newStock: currentStock
             }, client);
@@ -268,7 +268,7 @@ class PurchaseReturn {
           userId,
           productId: product_id,
           quantity: quantity, // Note: This is positive in the original code
-          transactionTypeId: 8, // CANCELLED_PURCHASE_RETURN
+          transactionTypeId: InventoryTransaction.TRANSACTION_TYPES.CANCELLED_PURCHASE_RETURN,
           previousStock,
           newStock: currentStock
         }, client);

@@ -71,7 +71,7 @@ class SalesOrder {
               userId,
               productId: item.productId,
               quantity: -Number(item.quantity),
-              transactionTypeId: 3, // CONFIRMED_SALES_ORDER
+              transactionTypeId: InventoryTransaction.TRANSACTION_TYPES.CONFIRMED_SALES_ORDER,
               previousStock,
               newStock: currentStock
             }, client);
@@ -191,7 +191,7 @@ class SalesOrder {
               userId,
               productId,
               quantity: oldItemsMap[productId],
-              transactionTypeId: 4, // CANCELLED_SALES_ORDER
+              transactionTypeId: InventoryTransaction.TRANSACTION_TYPES.CANCELLED_SALES_ORDER,
               previousStock,
               newStock: currentStock
             }, client);
@@ -265,7 +265,7 @@ class SalesOrder {
                   userId,
                   productId,
                   quantity: -quantityDifference,
-                  transactionTypeId: 9, // ADJUSTMENT
+                  transactionTypeId: InventoryTransaction.TRANSACTION_TYPES.ADJUSTMENT,
                   previousStock,
                   newStock: currentStock
                 }, client);
@@ -286,7 +286,7 @@ class SalesOrder {
                 userId,
                 productId,
                 quantity: -quantity,
-                transactionTypeId: 3, // CONFIRMED_SALES_ORDER
+                transactionTypeId: InventoryTransaction.TRANSACTION_TYPES.CONFIRMED_SALES_ORDER,
                 previousStock,
                 newStock: currentStock
               }, client);
@@ -307,7 +307,7 @@ class SalesOrder {
               userId,
               productId,
               quantity: -quantity,
-              transactionTypeId: 3, // CONFIRMED_SALES_ORDER
+              transactionTypeId: InventoryTransaction.TRANSACTION_TYPES.CONFIRMED_SALES_ORDER,
               previousStock,
               newStock: currentStock
             }, client);
@@ -358,7 +358,7 @@ class SalesOrder {
             userId,
             productId: product_id,
             quantity: Number(quantity),
-            transactionTypeId: 4, // CANCELLED_SALES_ORDER
+            transactionTypeId: InventoryTransaction.TRANSACTION_TYPES.CANCELLED_SALES_ORDER,
             previousStock,
             newStock: currentStock
           }, client);
