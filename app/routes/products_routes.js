@@ -2,6 +2,8 @@ const express = require('express');
 const router = express.Router();
 const { verificarToken } = require('../middlewares/auth_middleware');
 const { createProduct, listProducts, getProduct, updateProduct, deleteProduct } = require('../controllers/products_controller');
+const { validateCreate, validateUpdate, validateId } = require('../validators/product_validators');
+const { validateResult } = require('../utils/validate_util');
 
 router.use(verificarToken);
 
@@ -70,7 +72,7 @@ router.use(verificarToken);
  *       401:
  *         description: Token inválido o expirado
  */
-router.post('/', createProduct);
+router.post('/', validateCreate, validateResult, createProduct);
 
 /**
  * @swagger
@@ -111,7 +113,7 @@ router.get('/', listProducts);
  *       401:
  *         description: Token inválido o expirado
  */
-router.get('/:id', getProduct);
+router.get('/:id', validateId, validateResult, getProduct);
 
 /**
  * @swagger
@@ -174,7 +176,7 @@ router.get('/:id', getProduct);
  *       401:
  *         description: Token inválido o expirado
  */
-router.put('/:id', updateProduct);
+router.put('/:id', validateUpdate, validateResult, updateProduct);
 
 /**
  * @swagger
@@ -199,6 +201,6 @@ router.put('/:id', updateProduct);
  *       401:
  *         description: Token inválido o expirado
  */
-router.delete('/:id', deleteProduct);
+router.delete('/:id', validateId, validateResult, deleteProduct);
 
 module.exports = router;

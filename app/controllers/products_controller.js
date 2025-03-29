@@ -8,37 +8,17 @@ function normalizeName(name) {
 }
 
 async function createProduct(req, res) {
-  let {
-    name, description,
-    unitPrice, unitCost,
-    imageUrl,
-    categoryId, unitOfMeasureId,
-    quantity, barcode
-  } = req.body;
+  let { name, description, unitPrice, unitCost, imageUrl, categoryId, 
+        unitOfMeasureId, quantity, barcode } = req.body;
   const userId = req.usuario.userId;
 
-  // Campos requeridos
-  if (!name || unitPrice == null || unitCost == null || !categoryId || !unitOfMeasureId) {
-    return sendResponse(res, 400, 'error', 'Faltan campos requeridos');
-  }
-
-  // Convertir y validar numéricos
-  unitPrice = Number(unitPrice);
-  unitCost = Number(unitCost);
-  categoryId = Number(categoryId);
-  unitOfMeasureId = Number(unitOfMeasureId);
-  quantity = quantity == null ? 0 : Number(quantity);
-
-  if ([unitPrice, unitCost, categoryId, unitOfMeasureId, quantity]
-      .some(v => isNaN(v))) {
-    return sendResponse(res, 400, 'error', 'Los campos numéricos deben ser válidos');
-  }
-
-  // Normalizar
+  // Express validator already validated types and required fields
+  
+  // Normalizar nombre
   name = normalizeName(name);
-
-  barcode = typeof barcode === 'string' ? barcode.trim() : String(barcode || '').trim();
-  if (barcode === '') barcode = null;
+  
+  // Handle barcode - if empty after trim, set to null
+  barcode = barcode?.trim() || null;
   
   // Unicidad nombre
   if (await Product.findByNameAndUser(name, userId)) {
@@ -65,34 +45,17 @@ async function createProduct(req, res) {
 
 async function updateProduct(req, res) {
   const id = Number(req.params.id);
-  let {
-    name, description,
-    unitPrice, unitCost,
-    imageUrl,
-    categoryId, unitOfMeasureId,
-    quantity, barcode
-  } = req.body;
+  let { name, description, unitPrice, unitCost, imageUrl, categoryId, 
+        unitOfMeasureId, quantity, barcode } = req.body;
   const userId = req.usuario.userId;
 
-  if (!name || unitPrice == null || unitCost == null || !categoryId || !unitOfMeasureId) {
-    return sendResponse(res, 400, 'error', 'Faltan campos requeridos');
-  }
-
-  unitPrice = Number(unitPrice);
-  unitCost = Number(unitCost);
-  categoryId = Number(categoryId);
-  unitOfMeasureId = Number(unitOfMeasureId);
-  quantity = quantity == null ? 0 : Number(quantity);
-
-  if ([unitPrice, unitCost, categoryId, unitOfMeasureId, quantity]
-      .some(v => isNaN(v))) {
-    return sendResponse(res, 400, 'error', 'Los campos numéricos deben ser válidos');
-  }
-
+  // Express validator already validated types and required fields
+  
+  // Normalizar nombre
   name = normalizeName(name);
   
-  barcode = typeof barcode === 'string' ? barcode.trim() : String(barcode || '').trim();
-  if (barcode === '') barcode = null;
+  // Handle barcode - if empty after trim, set to null
+  barcode = barcode?.trim() || null;
 
   const existingByName = await Product.findByNameAndUser(name, userId);
   if (existingByName && existingByName.id !== id) {
