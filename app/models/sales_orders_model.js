@@ -147,8 +147,8 @@ class SalesOrder {
       const newStatusName = newStatusInfo[0]?.name;
       
       // Prevent changing from confirmed to any other status
-      if (oldStatusName === 'confirmed' && newStatusName !== 'pending') {
-        throw new Error('No se puede cambiar una orden de venta de "confirmado" a "pendiente".');
+      if (oldStatusName === 'confirmed' && newStatusName !== 'confirmed') {
+        throw new Error('No se puede cambiar una orden de venta de "confirmado" a otro estado.');
       }
 
       // Get existing items
@@ -160,8 +160,44 @@ class SalesOrder {
       // Create a mapping of old items by product_id for quick lookup
       const oldItemsMap = {};
       oldItems.forEach(item => {
-        oldItemsMap[item.product_id] = item.quantity;
+        oldItemsMap[item.product_id] = Number(item.quantity);
       });
+      
+      // Create a mapping of new items by product_id
+      const newItemsMap = {};
+      if (items && items.length > 0) {
+        items.forEach(item => {
+          newItemsMap[item.productId] = Number(item.quantity);
+        });
+      }
+      
+      // Handle inventory adjustments for removed products
+      if (oldStatusName === 'confirmed') {
+        for (const oldItem of oldItems) {
+          const productId = oldItem.product_id;
+          // If product was in the old order but removed from the new order
+          if (!newItemsMap[productId]) {
+            // Return quantity to inventory
+            const productResult = await client.query(
+              `UPDATE public.products SET quantity = quantity + $1 
+               WHERE id = $2 AND user_id = $3 RETURNING quantity`,
+              [oldItemsMap[productId], productId, userId]
+            );
+            
+            const currentStock = Number(productResult.rows[0].quantity);
+            const previousStock = currentStock - oldItemsMap[productId];
+
+            await InventoryTransaction.recordTransaction({
+              userId,
+              productId,
+              quantity: oldItemsMap[productId],
+              transactionTypeId: 4, // CANCELLED_SALES_ORDER
+              previousStock,
+              newStock: currentStock
+            }, client);
+          }
+        }
+      }
       
       // Delete old items
       await client.query(
@@ -199,59 +235,84 @@ class SalesOrder {
       // If items are provided, add new items and update inventory
       if (items && items.length > 0) {
         for (const item of items) {
+          const productId = item.productId;
+          const quantity = Number(item.quantity);
 
           await client.query(
             `INSERT INTO public.sales_order_products(sales_order_id, product_id, quantity, unit_price)
              VALUES ($1, $2, $3, $4)`,
-
-            [salesOrder.id, item.productId, item.quantity, item.unitPrice]
+            [salesOrder.id, productId, quantity, item.unitPrice]
           );
 
-          // Update inventory based on new status
+          // Update inventory based on business rules
           if (newStatusName === 'confirmed') {
-            // If old status was also confirmed, only remove the difference from inventory
-            if (oldStatusName === 'confirmed') {
-              const oldQuantity = Number(oldItemsMap[item.productId] || 0);
-              const quantityDifference = Number(item.quantity) - oldQuantity;
+            // Case 1: Product existed in old order (updated quantity)
+            if (productId in oldItemsMap) {
+              const quantityDifference = quantity - oldItemsMap[productId];
               
+              // Only update inventory if the quantity has changed
               if (quantityDifference !== 0) {
                 const productResult = await client.query(
-                  `UPDATE public.products SET quantity = quantity - $1 WHERE id = $2 AND user_id = $3 RETURNING quantity`,
-                  [quantityDifference, item.productId, userId]
+                  `UPDATE public.products SET quantity = quantity - $1 
+                   WHERE id = $2 AND user_id = $3 RETURNING quantity`,
+                  [quantityDifference, productId, userId]
                 );
                 
                 const currentStock = Number(productResult.rows[0].quantity);
-                const previousStock = currentStock + Number(quantityDifference);
+                const previousStock = currentStock + quantityDifference;
 
                 await InventoryTransaction.recordTransaction({
                   userId,
-                  productId: item.productId,
+                  productId,
                   quantity: -quantityDifference,
                   transactionTypeId: 9, // ADJUSTMENT
                   previousStock,
                   newStock: currentStock
                 }, client);
               }
-            } else {
-              // If changing from another status to confirmed, remove full quantity
+            }
+            // Case 2: New product added to a confirmed order
+            else {
               const productResult = await client.query(
-                `UPDATE public.products SET quantity = quantity - $1 WHERE id = $2 AND user_id = $3 RETURNING quantity`,
-                [Number(item.quantity), item.productId, userId]
+                `UPDATE public.products SET quantity = quantity - $1 
+                 WHERE id = $2 AND user_id = $3 RETURNING quantity`,
+                [quantity, productId, userId]
               );
               
               const currentStock = Number(productResult.rows[0].quantity);
-              const previousStock = currentStock + Number(item.quantity);
+              const previousStock = currentStock + quantity;
 
               await InventoryTransaction.recordTransaction({
                 userId,
-                productId: item.productId,
-                quantity: -Number(item.quantity),
+                productId,
+                quantity: -quantity,
                 transactionTypeId: 3, // CONFIRMED_SALES_ORDER
                 previousStock,
                 newStock: currentStock
               }, client);
             }
           }
+          // Case 3: Status changed from pending to confirmed
+          else if (oldStatusName === 'pending' && newStatusName === 'confirmed') {
+            const productResult = await client.query(
+              `UPDATE public.products SET quantity = quantity - $1 
+               WHERE id = $2 AND user_id = $3 RETURNING quantity`,
+              [quantity, productId, userId]
+            );
+            
+            const currentStock = Number(productResult.rows[0].quantity);
+            const previousStock = currentStock + quantity;
+
+            await InventoryTransaction.recordTransaction({
+              userId,
+              productId,
+              quantity: -quantity,
+              transactionTypeId: 3, // CONFIRMED_SALES_ORDER
+              previousStock,
+              newStock: currentStock
+            }, client);
+          }
+          // No inventory changes for other status combinations
         }
       }
       
