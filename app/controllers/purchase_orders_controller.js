@@ -15,28 +15,19 @@ async function createPurchaseOrder(req, res) {
     const userId = req.usuario.userId;
     const { supplierId, statusId, purchaseOrderDate, notes, items } = req.body;
   
-    // Validate required fields
-    if (!supplierId || statusId == null || !Array.isArray(items) || items.length === 0) {
-      return sendResponse(res, 400, 'error', 'Proveedor, estado y al menos un producto son requeridos');
-    }
-  
     // Validate supplier
     const supplier = await Supplier.findById(supplierId, userId);
     if (!supplier) {
       return sendResponse(res, 404, 'error', 'Proveedor no encontrado o no pertenece al usuario');
     }
 
-    // Calculate total amount directly and validate products
+    // Calculate total amount and validate products
     let totalAmount = 0;
     const validatedItems = [];
     
     for (const item of items) {
       const qty = toNumber(item.quantity);
       const cost = toNumber(item.unitCost);
-      
-      if (!qty || qty <= 0 || cost === null || cost <= 0) {
-        return sendResponse(res, 400, 'error', 'Cantidad y costo unitario inválidos');
-      }
       
       const product = await Product.findById(item.productId, userId);
       if (!product) {
@@ -115,11 +106,6 @@ async function updatePurchaseOrder(req, res) {
     const purchaseOrderId = Number(req.params.id);
     const { supplierId, statusId, purchaseOrderDate, notes, items } = req.body;
 
-    // Validate required fields
-    if (!supplierId || statusId == null || !Array.isArray(items) || items.length === 0) {
-      return sendResponse(res, 400, 'error', 'Proveedor, estado y al menos un producto son requeridos');
-    }
-
     // Validate supplier belongs to user
     const supplier = await Supplier.findById(supplierId, userId);
     if (!supplier) {
@@ -139,10 +125,6 @@ async function updatePurchaseOrder(req, res) {
     for (const item of items) {
       const qty = toNumber(item.quantity);
       const cost = toNumber(item.unitCost);
-      
-      if (!qty || qty <= 0 || cost === null || cost <= 0) {
-        return sendResponse(res, 400, 'error', 'Cantidad y costo unitario inválidos');
-      }
       
       const product = await Product.findById(item.productId, userId);
       if (!product) {

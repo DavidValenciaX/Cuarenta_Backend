@@ -8,6 +8,11 @@ const {
   updatePurchaseOrder,
   deletePurchaseOrder
 } = require('../controllers/purchase_orders_controller');
+const {
+  validateCreatePurchaseOrder,
+  validateUpdatePurchaseOrder,
+  validateGetOrDeletePurchaseOrder
+} = require('../validators/purchase_order_validators');
 
 router.use(verificarToken);
 
@@ -82,7 +87,7 @@ router.use(verificarToken);
  *       500:
  *         description: Error interno del servidor
  */
-router.post('/', createPurchaseOrder);
+router.post('/', validateCreatePurchaseOrder, createPurchaseOrder);
 
 /**
  * @swagger
@@ -123,7 +128,7 @@ router.get('/', listPurchaseOrders);
  *       404:
  *         description: Orden no encontrada
  */
-router.get('/:id', getPurchaseOrder);
+router.get('/:id', validateGetOrDeletePurchaseOrder, getPurchaseOrder);
 
 /**
  * @swagger
@@ -193,7 +198,7 @@ router.get('/:id', getPurchaseOrder);
  *       404:
  *         description: Orden no encontrada
  */
-router.put('/:id', updatePurchaseOrder);
+router.put('/:id', validateUpdatePurchaseOrder, updatePurchaseOrder);
 
 /**
  * @swagger
@@ -218,6 +223,6 @@ router.put('/:id', updatePurchaseOrder);
  *       404:
  *         description: Orden no encontrada
  */
-router.delete('/:id', deletePurchaseOrder);
+router.delete('/:id', validateGetOrDeletePurchaseOrder, deletePurchaseOrder);
 
 module.exports = router;
