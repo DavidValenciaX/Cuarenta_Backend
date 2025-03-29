@@ -48,8 +48,7 @@ async function createPurchaseReturn(req, res) {
       
       validatedItems.push({
         productId: item.productId,
-        quantity: qty,
-        statusId: item.statusId
+        quantity: qty
       });
     }
 
@@ -149,8 +148,7 @@ async function updatePurchaseReturn(req, res) {
       
       validatedItems.push({
         productId: item.productId,
-        quantity: qty,
-        statusId: item.statusId
+        quantity: qty
       });
     }
 

@@ -37,13 +37,13 @@ class PurchaseReturn {
       if (items && items.length > 0) {
         for (const item of items) {
           try {
-            // Insert the purchase return product record with its status
+            // Insert the purchase return product record
             await client.query(
               `INSERT INTO public.purchase_return_products(
-                purchase_return_id, product_id, quantity, status_id
+                purchase_return_id, product_id, quantity
               )
-              VALUES ($1, $2, $3, $4)`,
-              [purchaseReturn.id, item.productId, item.quantity, item.statusId]
+              VALUES ($1, $2, $3)`,
+              [purchaseReturn.id, item.productId, item.quantity]
             );
 
             // Always update product inventory (decrease stock)
@@ -112,12 +112,10 @@ class PurchaseReturn {
   // Get items for a purchase return
   static async getItems(purchaseReturnId, userId) {
     const { rows } = await pool.query(
-      `SELECT prp.*, p.name as product_name, p.description as product_description,
-              st.name as status_name
+      `SELECT prp.*, p.name as product_name, p.description as product_description
        FROM public.purchase_return_products prp
        JOIN public.products p ON prp.product_id = p.id
        JOIN public.purchase_returns pr ON prp.purchase_return_id = pr.id
-       LEFT JOIN public.status_types st ON prp.status_id = st.id
        WHERE prp.purchase_return_id = $1 AND pr.user_id = $2`,
       [purchaseReturnId, userId]
     );
@@ -203,13 +201,13 @@ class PurchaseReturn {
       if (items && items.length > 0) {
         for (const item of items) {
           try {
-            // Insert the purchase return product with its status
+            // Insert the purchase return product
             await client.query(
               `INSERT INTO public.purchase_return_products(
-                purchase_return_id, product_id, quantity, status_id
+                purchase_return_id, product_id, quantity
               )
-              VALUES ($1, $2, $3, $4)`,
-              [id, item.productId, item.quantity, item.statusId]
+              VALUES ($1, $2, $3)`,
+              [id, item.productId, item.quantity]
             );
             
             // Always update inventory since all returns are confirmed

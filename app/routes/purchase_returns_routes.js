@@ -65,10 +65,6 @@ router.use(verificarToken);
  *                       type: integer
  *                       example: 2
  *                       description: Cantidad devuelta
- *                     statusId:
- *                       type: integer
- *                       example: 1
- *                       description: Estado específico para este producto
  *     responses:
  *       201:
  *         description: Devolución de compra creada exitosamente
@@ -173,10 +169,6 @@ router.get('/:id', getPurchaseReturn);
  *                     quantity:
  *                       type: integer
  *                       example: 3
- *                     statusId:
- *                       type: integer
- *                       example: 2
- *                       description: Estado específico para este producto
  *     responses:
  *       200:
  *         description: Devolución de compra actualizada
