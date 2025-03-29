@@ -3,13 +3,12 @@ const { sendResponse } = require('../utils/response_util');
 
 function normalizeName(name) {
     return name.trim().replace(/\s+/g, ' ');
-  }
+}
 
 async function createCategory(req, res) {
   let { name } = req.body;
   const userId = req.usuario.userId;
-  if (!name) return sendResponse(res, 400, 'error', 'El nombre es requerido');
-
+  
   name = normalizeName(name);
 
   // Verificar duplicado
@@ -38,8 +37,7 @@ async function updateCategory(req, res) {
     const { id } = req.params;
     let { name } = req.body;
     const userId = req.usuario.userId;
-    if (!name) return sendResponse(res, 400, 'error', 'El nombre es requerido');
-  
+    
     name = normalizeName(name);
   
     const exists = await Category.findByNameAndUser(name, userId);
@@ -50,7 +48,7 @@ async function updateCategory(req, res) {
     const updated = await Category.update(id, name, userId);
     if (!updated) return sendResponse(res, 404, 'error', 'Categoría no encontrada');
     return sendResponse(res, 200, 'success', 'Categoría actualizada', updated);
-  }
+}
 
 async function deleteCategory(req, res) {
   const { id } = req.params;

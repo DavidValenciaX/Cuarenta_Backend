@@ -8,6 +8,13 @@ const {
   updateCategory,
   deleteCategory
 } = require('../controllers/categories_controller');
+const { 
+  validateCreate, 
+  validateUpdate, 
+  validateGetById, 
+  validateDelete 
+} = require('../validators/categories_validators');
+const { validateResult } = require('../utils/validate_util');
 
 router.use(verificarToken);
 
@@ -46,7 +53,7 @@ router.use(verificarToken);
  *       401:
  *         description: Token inválido o expirado
  */
-router.post('/', createCategory);
+router.post('/', validateCreate, validateResult, createCategory);
 
 /**
  * @swagger
@@ -87,7 +94,7 @@ router.get('/', listCategories);
  *       401:
  *         description: Token inválido o expirado
  */
-router.get('/:id', getCategory);
+router.get('/:id', validateGetById, validateResult, getCategory);
 
 /**
  * @swagger
@@ -122,7 +129,7 @@ router.get('/:id', getCategory);
  *       401:
  *         description: Token inválido o expirado
  */
-router.put('/:id', updateCategory);
+router.put('/:id', validateUpdate, validateResult, updateCategory);
 
 /**
  * @swagger
@@ -147,6 +154,6 @@ router.put('/:id', updateCategory);
  *       401:
  *         description: Token inválido o expirado
  */
-router.delete('/:id', deleteCategory);
+router.delete('/:id', validateDelete, validateResult, deleteCategory);
 
 module.exports = router;
