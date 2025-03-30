@@ -32,7 +32,8 @@ const swaggerOptions = {
       { name: 'Purchase Returns', description: 'Gestión de devoluciones de compra' },
       { name: 'Inventory Transactions', description: 'Gestión del historial de movimientos de inventario' },
       { name: 'Status', description: 'Gestión de estados y categorías de estados' },
-      { name: 'Measurements', description: 'Gestión de tipos de medidas y unidades de medida' }
+      { name: 'Measurements', description: 'Gestión de tipos de medidas y unidades de medida' },
+      { name: 'AI Notifications', description: 'Gestión de notificaciones generadas por IA sobre inventario' }
     ],
     components: {
       securitySchemes: {
@@ -64,8 +65,6 @@ const swaggerSpec = swaggerJsdoc(swaggerOptions);
 // Montar Swagger UI
 app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
-
-
 //Routa principal y rutas de index_routes
 app.get('/', (req, res) => {
   res.send('Hola, bienvenido a Cuarenta');
@@ -73,12 +72,10 @@ app.get('/', (req, res) => {
 
 app.use(routes);
 
-
 // Definir el puerto desde las variables de entorno o usar 3000 por defecto
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   const ip = getServerIP();
   console.log(`Server running on http://${ip}:${PORT}`);
   console.log(`Documentación: http://${ip}:${PORT}/docs`);
-
 });
