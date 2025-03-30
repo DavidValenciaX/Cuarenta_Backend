@@ -171,6 +171,30 @@ class SalesOrder {
         });
       }
       
+      // Check if there is sufficient stock for any products with increased quantity
+      if (newStatusName === 'confirmed') {
+        for (const item of items) {
+          const productId = item.productId;
+          const newQuantity = Number(item.quantity);
+          const oldQuantity = oldItemsMap[productId] || 0;
+          
+          // Only check stock if quantity is increasing
+          if (newQuantity > oldQuantity) {
+            const quantityIncrease = newQuantity - oldQuantity;
+            
+            // Check current stock level
+            const { rows: stockResult } = await client.query(
+              `SELECT quantity FROM public.products WHERE id = $1 AND user_id = $2`,
+              [productId, userId]
+            );
+            
+            if (!stockResult.length || Number(stockResult[0].quantity) < quantityIncrease) {
+              throw new Error(`No hay suficiente stock disponible para el producto ID ${productId}`);
+            }
+          }
+        }
+      }
+      
       // Handle inventory adjustments for removed products
       if (oldStatusName === 'confirmed') {
         for (const oldItem of oldItems) {
