@@ -162,7 +162,7 @@ class PurchaseOrder {
 
       // Prevent any modification to confirmed purchase orders
       if (oldStatusName === 'confirmed') {
-        throw new Error('Una orden de compra confirmada no puede ser modificada');
+        throw new Error('No se puede modificar una orden de compra confirmada');
       }
 
       // Get existing items without deleting them yet

@@ -146,9 +146,9 @@ class SalesOrder {
       );
       const newStatusName = newStatusInfo[0]?.name;
       
-      // Prevent changing from confirmed to any other status
-      if (oldStatusName === 'confirmed' && newStatusName !== 'confirmed') {
-        throw new Error('No se puede cambiar una orden de venta de "confirmado" a otro estado.');
+      // Prevent any modification to confirmed sales orders
+      if (oldStatusName === 'confirmed') {
+        throw new Error('No se puede modificar una orden de venta confirmada');
       }
 
       // Get existing items
@@ -191,34 +191,6 @@ class SalesOrder {
             if (!stockResult.length || Number(stockResult[0].quantity) < quantityIncrease) {
               throw new Error(`No hay suficiente stock disponible para el producto ID ${productId}`);
             }
-          }
-        }
-      }
-      
-      // Handle inventory adjustments for removed products
-      if (oldStatusName === 'confirmed') {
-        for (const oldItem of oldItems) {
-          const productId = oldItem.product_id;
-          // If product was in the old order but removed from the new order
-          if (!newItemsMap[productId]) {
-            // Return quantity to inventory
-            const productResult = await client.query(
-              `UPDATE public.products SET quantity = quantity + $1 
-               WHERE id = $2 AND user_id = $3 RETURNING quantity`,
-              [oldItemsMap[productId], productId, userId]
-            );
-            
-            const currentStock = Number(productResult.rows[0].quantity);
-            const previousStock = currentStock - oldItemsMap[productId];
-
-            await InventoryTransaction.recordTransaction({
-              userId,
-              productId,
-              quantity: oldItemsMap[productId],
-              transactionTypeId: InventoryTransaction.TRANSACTION_TYPES.CANCELLED_SALES_ORDER,
-              previousStock,
-              newStock: currentStock
-            }, client);
           }
         }
       }
