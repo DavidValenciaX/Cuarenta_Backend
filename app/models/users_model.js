@@ -25,10 +25,10 @@ class User {
 
     //Método para comprobar si el correo ya existe
     static async findByEmail(email) {
-    const query = 'SELECT id FROM public.users WHERE email = $1 LIMIT 1';
-    const { rows } = await pool.query(query, [email]);
-    return rows[0]; // Retorna undefined si no encuentra nada
-   }
+      const query = 'SELECT id, full_name FROM public.users WHERE email = $1 LIMIT 1';
+      const { rows } = await pool.query(query, [email]);
+      return rows[0]; // Retorna undefined si no encuentra nada
+    }
   
    //Buscar si el token de confirmacion existe
   static async findByConfirmationToken(token) {

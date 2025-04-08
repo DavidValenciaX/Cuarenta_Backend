@@ -218,7 +218,7 @@ async function resetPassword(req, res) {
   
       // Verificar expiración
       const now = moment().tz('America/Bogota');
-      if (moment(user.passwordResetTokenExpiration).isBefore(now)) {
+      if (moment(user.password_reset_token_expiration).isBefore(now)) {
         return sendResponse(res, 400, 'error', 'Token expirado');
       }
   
