@@ -98,7 +98,27 @@ async function loginUser(req, res) {
       }
   
       if (user.status === 'pending' && user.category === 'user') {
-        return sendResponse(res, 403, 'error', 'Cuenta pendiente por confirmar');
+        // Generate new token for unconfirmed user
+        const newToken = generateToken();
+        const newExpiration = moment().tz('America/Bogota').add(1, 'hour').format();
+        
+        // Update confirmation token in database
+        await User.updateConfirmationToken(user.id, newToken, newExpiration);
+        
+        // Get user's full details to send email
+        const userDetails = await User.findById(user.id);
+        
+        // Send confirmation email with new token
+        await sendEmail(
+          email,
+          'Confirma tu cuenta',
+          getConfirmationEmailTemplate(userDetails.full_name || email, newToken)
+        );
+        
+        return sendResponse(res, 403, 'error', 'Cuenta pendiente por confirmar. Se ha enviado un nuevo código de confirmación a tu correo', {
+          newToken,
+          newExpiration
+        });
       }
 
       // Comparar password ingresada con el hash en DB
