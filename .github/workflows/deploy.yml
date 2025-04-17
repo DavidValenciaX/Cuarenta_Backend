@@ -25,7 +25,15 @@ jobs:
             export NVM_DIR="$HOME/.nvm"
             [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
             [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
-            cd /home/projects/Cuarenta_Backend &&
-            git pull origin main &&
-            npm install &&
+            
+            # Navigate to the project directory
+            cd /home/projects/Cuarenta_Backend
+
+            # Pull the latest changes from the main branch
+            git pull origin main
+            
+            # Install dependencies
+            npm install
+
+            # Restart the PM2 process or start it if it's not running
             pm2 restart index.js || pm2 start index.js --name CuarentaBackend
