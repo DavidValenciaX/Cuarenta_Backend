@@ -194,9 +194,7 @@ async function logoutUser(req, res) {
       // Generar token y expiración en UTC
       const resetTokenHash = generateToken();
       // Calculate expiration 20 minutes from the current UTC time
-      const resetTokenExpiration = moment.utc().add(20, 'minute').toDate(); // Convert to JavaScript Date object
-  
-      console.log('Reset Token Expiration (Date):', resetTokenExpiration);
+      const resetTokenExpiration = moment.utc().add(20, 'minute').toDate();
 
       // Guardar en DB
       await User.updateResetToken(user.id, resetTokenHash, resetTokenExpiration);
@@ -239,17 +237,11 @@ async function resetPassword(req, res) {
         return sendResponse(res, 404, 'error', 'Token inválido o usuario no encontrado');
       }
       
-      // --- Logging (can be removed after confirming fix) ---
-      console.log('Stored Expiration (Raw):', user.password_reset_token_expiration);
-      const storedExpirationMoment = moment.utc(user.password_reset_token_expiration); // Explicitly parse stored time as UTC
-      console.log('Stored Expiration (Moment UTC Parsed):', storedExpirationMoment.format());
-      const nowUtc = moment.utc(); // Get current time in UTC
-      console.log('Current Time (UTC):', nowUtc.format());
-      // --- End Logging ---
+      const storedExpirationMoment = moment.utc(user.password_reset_token_expiration);
+      const nowUtc = moment.utc();
   
       // Verificar expiración - Compare stored UTC with current UTC
       if (storedExpirationMoment.isBefore(nowUtc)) {
-        console.log('Expiration check failed: Stored UTC time is BEFORE current UTC time.'); // Updated log message
         return sendResponse(res, 400, 'error', 'Token expirado');
       }
   
