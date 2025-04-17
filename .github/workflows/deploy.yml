@@ -22,16 +22,10 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_KEY }}
           script: |
-            echo "🛠 Entrando a la carpeta del proyecto..."
-            cd /home/projects/Cuarenta_Backend
-
-            echo "📥 Haciendo pull de los últimos cambios..."
-            git pull origin main
-
-            echo "📦 Instalando dependencias..."
-            npm install
-
-            echo "🚀 Reiniciando aplicación con PM2..."
+            export NVM_DIR="$HOME/.nvm"
+            [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+            [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
+            cd /home/projects/Cuarenta_Backend &&
+            git pull origin main &&
+            npm install &&
             pm2 restart index.js || pm2 start index.js --name CuarentaBackend
-
-            echo "✅ Despliegue completado"
