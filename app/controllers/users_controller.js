@@ -235,10 +235,17 @@ async function resetPassword(req, res) {
       if (!user) {
         return sendResponse(res, 404, 'error', 'Token inválido o usuario no encontrado');
       }
+      
+      // --- Add Logging Here ---
+      console.log('Stored Expiration (Raw):', user.password_reset_token_expiration);
+      console.log('Stored Expiration (Moment Parsed):', moment(user.password_reset_token_expiration).format());
+      const now = moment().tz('America/Bogota');
+      console.log('Current Time (Bogota):', now.format());
+      // --- End Logging ---
   
       // Verificar expiración
-      const now = moment().tz('America/Bogota');
       if (moment(user.password_reset_token_expiration).isBefore(now)) {
+        console.log('Expiration check failed: Stored time is BEFORE current time.'); // Add this log
         return sendResponse(res, 400, 'error', 'Token expirado');
       }
   
