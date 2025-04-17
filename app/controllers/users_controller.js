@@ -191,9 +191,10 @@ async function logoutUser(req, res) {
         return sendResponse(res, 404, 'error', 'Usuario no encontrado');
       }
   
-      // Generar token y expiración 
+      // Generar token y expiración en UTC
       const resetTokenHash = generateToken();
-      const resetTokenExpiration = moment().tz('America/Bogota').add(20, 'minute').format();
+      // Calculate expiration 20 minutes from the current UTC time
+      const resetTokenExpiration = moment.utc().add(20, 'minute').toISOString(); // Use moment.utc() and format as ISO string
   
       // Guardar en DB
       await User.updateResetToken(user.id, resetTokenHash, resetTokenExpiration);
