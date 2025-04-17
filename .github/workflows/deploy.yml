@@ -1,0 +1,37 @@
+name: Deploy Node.js Backend to Ubuntu Contabo Server via SSH
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Deploy to Production Server
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          script: |
+            echo "🛠 Entrando a la carpeta del proyecto..."
+            cd /home/projects/Cuarenta_Backend
+
+            echo "📥 Haciendo pull de los últimos cambios..."
+            git pull origin main
+
+            echo "📦 Instalando dependencias..."
+            npm install
+
+            echo "🚀 Reiniciando aplicación con PM2..."
+            pm2 restart index.js || pm2 start index.js --name CuarentaBackend
+
+            echo "✅ Despliegue completado"
