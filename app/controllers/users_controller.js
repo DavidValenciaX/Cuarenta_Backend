@@ -236,16 +236,17 @@ async function resetPassword(req, res) {
         return sendResponse(res, 404, 'error', 'Token inválido o usuario no encontrado');
       }
       
-      // --- Add Logging Here ---
+      // --- Logging (can be removed after confirming fix) ---
       console.log('Stored Expiration (Raw):', user.password_reset_token_expiration);
-      console.log('Stored Expiration (Moment Parsed):', moment(user.password_reset_token_expiration).format());
-      const now = moment().tz('America/Bogota');
-      console.log('Current Time (Bogota):', now.format());
+      const storedExpirationMoment = moment.utc(user.password_reset_token_expiration); // Explicitly parse stored time as UTC
+      console.log('Stored Expiration (Moment UTC Parsed):', storedExpirationMoment.format());
+      const nowUtc = moment.utc(); // Get current time in UTC
+      console.log('Current Time (UTC):', nowUtc.format());
       // --- End Logging ---
   
-      // Verificar expiración
-      if (moment(user.password_reset_token_expiration).isBefore(now)) {
-        console.log('Expiration check failed: Stored time is BEFORE current time.'); // Add this log
+      // Verificar expiración - Compare stored UTC with current UTC
+      if (storedExpirationMoment.isBefore(nowUtc)) {
+        console.log('Expiration check failed: Stored UTC time is BEFORE current UTC time.'); // Updated log message
         return sendResponse(res, 400, 'error', 'Token expirado');
       }
   
