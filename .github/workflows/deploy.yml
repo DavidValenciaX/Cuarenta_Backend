@@ -36,4 +36,4 @@ jobs:
             npm install
 
             # Restart the PM2 process or start it if it's not running
-            pm2 restart index.js || pm2 start index.js --name CuarentaBackend
+            pm2 restart CuarentaBackend || pm2 start index.js --name CuarentaBackend
