@@ -194,10 +194,9 @@ async function logoutUser(req, res) {
       // Generar token y expiración en UTC
       const resetTokenHash = generateToken();
       // Calculate expiration 20 minutes from the current UTC time
-      const resetTokenExpiration = moment.utc().add(20, 'minute'); // Use moment.utc() and format as ISO string
+      const resetTokenExpiration = moment.utc().add(20, 'minute').toDate(); // Convert to JavaScript Date object
   
-      console.log('Reset Token Expiration (Moment):', resetTokenExpiration.format()); // Logging the moment object
-      console.log('Reset Token Expiration (ISO String):', resetTokenExpiration.toISOString()); // Logging the ISO string
+      console.log('Reset Token Expiration (Date):', resetTokenExpiration);
 
       // Guardar en DB
       await User.updateResetToken(user.id, resetTokenHash, resetTokenExpiration);
