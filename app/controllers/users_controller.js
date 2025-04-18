@@ -132,7 +132,7 @@ async function loginUser(req, res) {
       const token = jwt.sign(
         { userId: user.id }, 
         process.env.JWT_SECRET, 
-        { expiresIn: '2m' } // El token expira en 2 minutos
+        { expiresIn: '1h' } // El token expira en 1 hora
       );
   
       // Respuesta exitosa
