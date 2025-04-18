@@ -8,9 +8,15 @@ function normalizeName(name) {
 }
 
 async function createProduct(req, res) {
-  let { name, description, unitPrice, unitCost, imageUrl, categoryId, 
+  let { name, description, unitPrice, unitCost, categoryId, 
         unitOfMeasureId, quantity, barcode } = req.body;
   const userId = req.usuario.userId;
+
+  // Construir la URL de la imagen si se subió un archivo
+  let imageUrl = null;
+  if (req.file) {
+    imageUrl = `/uploads/products/${req.file.filename}`;
+  }
 
   // Express validator already validated types and required fields
   

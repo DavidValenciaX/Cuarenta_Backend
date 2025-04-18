@@ -4,6 +4,7 @@ const { verificarToken } = require('../middlewares/auth_middleware');
 const { createProduct, listProducts, getProduct, updateProduct, deleteProduct } = require('../controllers/products_controller');
 const { validateCreate, validateUpdate, validateId } = require('../validators/product_validators');
 const { validateResult } = require('../utils/validate_util');
+const upload = require('../middlewares/upload_middleware');
 
 router.use(verificarToken);
 
@@ -22,10 +23,12 @@ router.use(verificarToken);
  *     tags: [Products]
  *     security:
  *       - bearerAuth: []
+ *     consumes:
+ *       - multipart/form-data
  *     requestBody:
  *       required: true
  *       content:
- *         application/json:
+ *         multipart/form-data:
  *           schema:
  *             type: object
  *             required:
@@ -47,9 +50,9 @@ router.use(verificarToken);
  *               unitCost:
  *                 type: number
  *                 example: 80.00
- *               imageUrl:
+ *               image:
  *                 type: string
- *                 example: "http://ejemplo.com/imagen.jpg"
+ *                 format: binary
  *               categoryId:
  *                 type: integer
  *                 example: 2
@@ -72,7 +75,7 @@ router.use(verificarToken);
  *       401:
  *         description: Token inválido o expirado
  */
-router.post('/', validateCreate, validateResult, createProduct);
+router.post('/', upload.single('image'), validateCreate, validateResult, createProduct);
 
 /**
  * @swagger
@@ -176,7 +179,7 @@ router.get('/:id', validateId, validateResult, getProduct);
  *       401:
  *         description: Token inválido o expirado
  */
-router.put('/:id', validateUpdate, validateResult, updateProduct);
+router.put('/:id', upload.single('image'), validateUpdate, validateResult, updateProduct);
 
 /**
  * @swagger
