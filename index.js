@@ -7,8 +7,18 @@ const swaggerUi = require('swagger-ui-express');
 const express = require('express');
 const routes = require('./app/routes/index_routes');
 const os = require('os');
+const cors = require('cors');
 
 const app = express();
+
+// Configura CORS antes de otras middlewares
+app.use(cors({
+  origin: '*', // Permite todas las origenes
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true
+}));
+
 app.use(express.json());
 
 // Configuración de swagger-jsdoc
