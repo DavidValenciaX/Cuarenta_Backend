@@ -24,6 +24,17 @@ const productFieldValidations = [
     .isFloat({ min: 0 }).withMessage('El costo unitario debe ser un número positivo')
     .toFloat(),
   
+  // Add a custom validator to check price vs cost relationship
+  body('unitPrice').custom((value, { req }) => {
+    const unitCost = parseFloat(req.body.unitCost);
+    const unitPrice = parseFloat(value);
+    
+    if (unitPrice <= unitCost) {
+      throw new Error('El precio unitario debe ser mayor al costo unitario');
+    }
+    return true;
+  }),
+
   body('imageUrl')
     .optional()
     .trim()

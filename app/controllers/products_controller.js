@@ -8,87 +8,117 @@ function normalizeName(name) {
 }
 
 async function createProduct(req, res) {
-  let { name, description, unitPrice, unitCost, categoryId, 
-        unitOfMeasureId, quantity, barcode } = req.body;
-  const userId = req.usuario.userId;
+  try {
+    let { name, description, unitPrice, unitCost, categoryId, 
+          unitOfMeasureId, quantity, barcode } = req.body;
+    const userId = req.usuario.userId;
 
-  // Construir la URL de la imagen si se subió un archivo
-  let imageUrl = null;
-  console.log('Request file:', req.file);
-  if (req.file) {
-    imageUrl = `/uploads/products/${req.file.filename}`;
-    console.log('Setting imageUrl to:', imageUrl);
-  } else {
-    console.log('No file uploaded with request');
+    // Validate that price is greater than cost
+    if (Number(unitPrice) <= Number(unitCost)) {
+      return sendResponse(res, 400, 'error', 'El precio unitario debe ser mayor al costo unitario');
+    }
+
+    // Construir la URL de la imagen si se subió un archivo
+    let imageUrl = null;
+    console.log('Request file:', req.file);
+    if (req.file) {
+      imageUrl = `/uploads/products/${req.file.filename}`;
+      console.log('Setting imageUrl to:', imageUrl);
+    } else {
+      console.log('No file uploaded with request');
+    }
+
+    // Express validator already validated types and required fields
+    
+    // Normalizar nombre
+    name = normalizeName(name);
+    
+    // Handle barcode - if empty after trim, set to null
+    barcode = barcode?.trim() || null;
+    
+    // Unicidad nombre
+    if (await Product.findByNameAndUser(name, userId)) {
+      return sendResponse(res, 409, 'error', 'Ya existe un producto con ese nombre');
+    }
+
+    // Unicidad barcode
+    if (barcode && await Product.findByBarcodeAndUser(barcode, userId)) {
+      return sendResponse(res, 409, 'error', 'Código de barras ya registrado');
+    }
+
+    // Verificar relaciones pertenecen al usuario
+    if (!await Category.findById(categoryId, userId)) {
+      return sendResponse(res, 404, 'error', 'Categoría no encontrada');
+    }
+
+    const product = await Product.create({
+      name, description, unitPrice, unitCost,
+      imageUrl, categoryId,
+      unitOfMeasureId, quantity, barcode, userId
+    });
+    
+    return sendResponse(res, 201, 'success', 'Producto creado', product);
+  } catch (error) {
+    // Check for our custom error from the model
+    if (error.statusCode) {
+      return sendResponse(res, error.statusCode, 'error', error.message);
+    }
+    
+    console.error(error);
+    return sendResponse(res, 500, 'error', 'Error al crear el producto');
   }
-
-  // Express validator already validated types and required fields
-  
-  // Normalizar nombre
-  name = normalizeName(name);
-  
-  // Handle barcode - if empty after trim, set to null
-  barcode = barcode?.trim() || null;
-  
-  // Unicidad nombre
-  if (await Product.findByNameAndUser(name, userId)) {
-    return sendResponse(res, 409, 'error', 'Ya existe un producto con ese nombre');
-  }
-
-  // Unicidad barcode
-  if (barcode && await Product.findByBarcodeAndUser(barcode, userId)) {
-    return sendResponse(res, 409, 'error', 'Código de barras ya registrado');
-  }
-
-  // Verificar relaciones pertenecen al usuario
-  if (!await Category.findById(categoryId, userId)) {
-    return sendResponse(res, 404, 'error', 'Categoría no encontrada');
-  }
-
-  const product = await Product.create({
-    name, description, unitPrice, unitCost,
-    imageUrl, categoryId,
-    unitOfMeasureId, quantity, barcode, userId
-  });
-  return sendResponse(res, 201, 'success', 'Producto creado', product);
 }
 
 async function updateProduct(req, res) {
-  const id = Number(req.params.id);
-  let { name, description, unitPrice, unitCost, imageUrl, categoryId, 
-        unitOfMeasureId, quantity, barcode } = req.body;
-  const userId = req.usuario.userId;
+  try {
+    const id = Number(req.params.id);
+    let { name, description, unitPrice, unitCost, imageUrl, categoryId, 
+          unitOfMeasureId, quantity, barcode } = req.body;
+    const userId = req.usuario.userId;
 
-  // Express validator already validated types and required fields
-  
-  // Normalizar nombre
-  name = normalizeName(name);
-  
-  // Handle barcode - if empty after trim, set to null
-  barcode = barcode?.trim() || null;
+    // Validate that price is greater than cost
+    if (Number(unitPrice) <= Number(unitCost)) {
+      return sendResponse(res, 400, 'error', 'El precio unitario debe ser mayor al costo unitario');
+    }
 
-  const existingByName = await Product.findByNameAndUser(name, userId);
-  if (existingByName && existingByName.id !== id) {
-    return sendResponse(res, 409, 'error', 'Ya existe un producto con ese nombre');
+    // Express validator already validated types and required fields
+    
+    // Normalizar nombre
+    name = normalizeName(name);
+    
+    // Handle barcode - if empty after trim, set to null
+    barcode = barcode?.trim() || null;
+
+    const existingByName = await Product.findByNameAndUser(name, userId);
+    if (existingByName && existingByName.id !== id) {
+      return sendResponse(res, 409, 'error', 'Ya existe un producto con ese nombre');
+    }
+
+    const existingByBarcode = barcode && await Product.findByBarcodeAndUser(barcode, userId);
+    if (existingByBarcode && existingByBarcode.id !== id) {
+      return sendResponse(res, 409, 'error', 'Código de barras ya registrado');
+    }
+
+    if (!await Category.findById(categoryId, userId)) {
+      return sendResponse(res, 404, 'error', 'Categoría no encontrada');
+    }
+
+    const updated = await Product.update(id, {
+      name, description, unitPrice, unitCost,
+      imageUrl, categoryId,
+      unitOfMeasureId, quantity, barcode
+    }, userId);
+
+    if (!updated) return sendResponse(res, 404, 'error', 'Producto no encontrado');
+    return sendResponse(res, 200, 'success', 'Producto actualizado', updated);
+  } catch (error) {
+    if (error.statusCode) {
+      return sendResponse(res, error.statusCode, 'error', error.message);
+    }
+    
+    console.error(error);
+    return sendResponse(res, 500, 'error', 'Error al actualizar el producto');
   }
-
-  const existingByBarcode = barcode && await Product.findByBarcodeAndUser(barcode, userId);
-  if (existingByBarcode && existingByBarcode.id !== id) {
-    return sendResponse(res, 409, 'error', 'Código de barras ya registrado');
-  }
-
-  if (!await Category.findById(categoryId, userId)) {
-    return sendResponse(res, 404, 'error', 'Categoría no encontrada');
-  }
-
-  const updated = await Product.update(id, {
-    name, description, unitPrice, unitCost,
-    imageUrl, categoryId,
-    unitOfMeasureId, quantity, barcode
-  }, userId);
-
-  if (!updated) return sendResponse(res, 404, 'error', 'Producto no encontrado');
-  return sendResponse(res, 200, 'success', 'Producto actualizado', updated);
 }
 
 async function listProducts(req, res) {

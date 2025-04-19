@@ -204,6 +204,14 @@ class Product {
       return result;
     } catch (error) {
       await client.query('ROLLBACK');
+      
+      // Handle specific database constraint errors
+      if (error.code === '23514' && error.constraint === 'products_check') {
+        const customError = new Error('El precio unitario debe ser mayor al costo unitario');
+        customError.statusCode = 400;
+        throw customError;
+      }
+      
       throw error;
     } finally {
       client.release();
