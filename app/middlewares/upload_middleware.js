@@ -7,6 +7,7 @@ const uploadDir = 'public/uploads/products';
 try {
   if (!fs.existsSync(uploadDir)){
     fs.mkdirSync(uploadDir, { recursive: true });
+    console.log(`Created directory: ${uploadDir}`);
   }
 } catch (error) {
   console.error('Error creating upload directory:', error);
@@ -15,16 +16,20 @@ try {
 // Configurar el almacenamiento
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    cb(null, 'public/uploads/products')
+    console.log('File being processed:', file.originalname);
+    cb(null, uploadDir)
   },
   filename: function (req, file, cb) {
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9)
-    cb(null, `product-${uniqueSuffix}${path.extname(file.originalname)}`)
+    const filename = `product-${uniqueSuffix}${path.extname(file.originalname)}`;
+    console.log('Generated filename:', filename);
+    cb(null, filename)
   }
 });
 
 // Filtrar tipos de archivo
 const fileFilter = (req, file, cb) => {
+  console.log('Filetype check:', file.mimetype);
   if (file.mimetype.startsWith('image/')) {
     cb(null, true);
   } else {

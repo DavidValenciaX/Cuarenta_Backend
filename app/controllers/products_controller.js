@@ -14,8 +14,12 @@ async function createProduct(req, res) {
 
   // Construir la URL de la imagen si se subió un archivo
   let imageUrl = null;
+  console.log('Request file:', req.file);
   if (req.file) {
     imageUrl = `/uploads/products/${req.file.filename}`;
+    console.log('Setting imageUrl to:', imageUrl);
+  } else {
+    console.log('No file uploaded with request');
   }
 
   // Express validator already validated types and required fields
