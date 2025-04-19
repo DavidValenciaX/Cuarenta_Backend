@@ -1,5 +1,16 @@
 const multer = require('multer');
 const path = require('path');
+const fs = require('fs');
+
+// Asegurar que el directorio existe
+const uploadDir = 'public/uploads/products';
+try {
+  if (!fs.existsSync(uploadDir)){
+    fs.mkdirSync(uploadDir, { recursive: true });
+  }
+} catch (error) {
+  console.error('Error creating upload directory:', error);
+}
 
 // Configurar el almacenamiento
 const storage = multer.diskStorage({
