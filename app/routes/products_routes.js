@@ -133,10 +133,12 @@ router.get('/:id', validateId, validateResult, getProduct);
  *         schema:
  *           type: integer
  *         description: ID del producto a actualizar
+ *     consumes:
+ *       - multipart/form-data
  *     requestBody:
  *       required: true
  *       content:
- *         application/json:
+ *         multipart/form-data:
  *           schema:
  *             type: object
  *             properties:
@@ -152,9 +154,10 @@ router.get('/:id', validateId, validateResult, getProduct);
  *               unitCost:
  *                 type: number
  *                 example: 90.00
- *               imageUrl:
+ *               image:
  *                 type: string
- *                 example: "http://ejemplo.com/nueva_imagen.jpg"
+ *                 example: "C:/path/to/new_image.jpg"
+ *                 format: binary
  *               categoryId:
  *                 type: integer
  *                 example: 2

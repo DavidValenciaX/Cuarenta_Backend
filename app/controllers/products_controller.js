@@ -72,7 +72,7 @@ async function createProduct(req, res) {
 async function updateProduct(req, res) {
   try {
     const id = Number(req.params.id);
-    let { name, description, unitPrice, unitCost, imageUrl, categoryId, 
+    let { name, description, unitPrice, unitCost, categoryId, 
           unitOfMeasureId, quantity, barcode } = req.body;
     const userId = req.usuario.userId;
 
@@ -81,6 +81,16 @@ async function updateProduct(req, res) {
       return sendResponse(res, 400, 'error', 'El precio unitario debe ser mayor al costo unitario');
     }
 
+    // Construir la URL de la imagen si se subió un archivo
+    let imageUrl = undefined; // undefined para no actualizar si no se envía imagen
+    console.log('Request file:', req.file);
+    if (req.file) {
+      imageUrl = `/uploads/products/${req.file.filename}`;
+      console.log('Setting imageUrl to:', imageUrl);
+    } else {
+      console.log('No file uploaded with update request');
+    }
+    
     // Express validator already validated types and required fields
     
     // Normalizar nombre
@@ -101,6 +111,14 @@ async function updateProduct(req, res) {
 
     if (!await Category.findById(categoryId, userId)) {
       return sendResponse(res, 404, 'error', 'Categoría no encontrada');
+    }
+
+    // Si no se proporciona una nueva imagen, obtener la URL de imagen existente
+    if (imageUrl === undefined) {
+      const existingProduct = await Product.findById(id, userId);
+      if (existingProduct) {
+        imageUrl = existingProduct.image_url;
+      }
     }
 
     const updated = await Product.update(id, {
