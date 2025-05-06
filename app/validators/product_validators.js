@@ -70,8 +70,17 @@ const validateProductId = [
     .toInt()
 ];
 
+// Validación para actualizar solo el stock
+const validateStockUpdate = [
+  body('quantity')
+    .notEmpty().withMessage('La cantidad es requerida')
+    .isFloat({ min: 0 }).withMessage('La cantidad debe ser un número positivo')
+    .toFloat()
+];
+
 module.exports = {
   validateCreate: productFieldValidations,
   validateUpdate: [...validateProductId, ...productFieldValidations],
-  validateId: validateProductId
+  validateId: validateProductId,
+  validateStockUpdate
 };

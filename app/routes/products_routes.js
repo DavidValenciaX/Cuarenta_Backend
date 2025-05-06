@@ -1,8 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const { verificarToken } = require('../middlewares/auth_middleware');
-const { createProduct, listProducts, getProduct, updateProduct, deleteProduct } = require('../controllers/products_controller');
-const { validateCreate, validateUpdate, validateId } = require('../validators/product_validators');
+const { createProduct, listProducts, getProduct, updateProduct, deleteProduct, updateProductStock } = require('../controllers/products_controller');
+const { validateCreate, validateUpdate, validateId, validateStockUpdate } = require('../validators/product_validators');
 const { validateResult } = require('../utils/validate_util');
 const upload = require('../middlewares/upload_middleware');
 
@@ -208,5 +208,44 @@ router.put('/:id', upload.single('image'), validateUpdate, validateResult, updat
  *         description: Token inválido o expirado
  */
 router.delete('/:id', validateId, validateResult, deleteProduct);
+
+/**
+ * @swagger
+ * /products/{id}/stock:
+ *   patch:
+ *     summary: Actualizar el stock de un producto
+ *     tags: [Products]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: ID del producto
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - quantity
+ *             properties:
+ *               quantity:
+ *                 type: number
+ *                 example: 100
+ *     responses:
+ *       200:
+ *         description: Stock actualizado exitosamente
+ *       400:
+ *         description: Error de validación
+ *       404:
+ *         description: Producto no encontrado
+ *       401:
+ *         description: Token inválido o expirado
+ */
+router.patch('/:id/stock', validateId, validateStockUpdate, validateResult, updateProductStock);
 
 module.exports = router;

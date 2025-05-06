@@ -139,6 +139,33 @@ async function updateProduct(req, res) {
   }
 }
 
+async function updateProductStock(req, res) {
+  try {
+    const id = Number(req.params.id);
+    const { quantity } = req.body;
+    const userId = req.usuario.userId;
+
+    // Buscar producto existente
+    const product = await Product.findById(id, userId);
+    if (!product) {
+      return sendResponse(res, 404, 'error', 'Producto no encontrado');
+    }
+
+    // Actualizar cantidad usando el método de ajuste
+    const updated = await Product.adjustQuantity(id, userId, Number(quantity) - Number(product.quantity));
+    if (!updated) {
+      return sendResponse(res, 404, 'error', 'Producto no encontrado');
+    }
+    return sendResponse(res, 200, 'success', 'Stock actualizado', updated);
+  } catch (error) {
+    if (error.statusCode) {
+      return sendResponse(res, error.statusCode, 'error', error.message);
+    }
+    console.error(error);
+    return sendResponse(res, 500, 'error', 'Error al actualizar el stock');
+  }
+}
+
 async function listProducts(req, res) {
   const products = await Product.findAllByUser(req.usuario.userId);
   return sendResponse(res, 200, 'success', 'Productos obtenidos', products);
@@ -156,4 +183,4 @@ async function deleteProduct(req, res) {
   return sendResponse(res, 200, 'success', 'Producto eliminado');
 }
 
-module.exports = { createProduct, updateProduct, listProducts, getProduct, deleteProduct };
+module.exports = { createProduct, updateProduct, listProducts, getProduct, deleteProduct, updateProductStock };
