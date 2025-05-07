@@ -28,7 +28,7 @@ const swaggerOptions = {
   definition: {
     openapi: '3.0.0',
     info: {
-      title: 'Cuarenta API',
+      title: 'Stock IA API',
       version: '1.0.0',
       description: 'Documentation of the API'
     },
@@ -79,7 +79,7 @@ app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 //Routa principal y rutas de index_routes
 app.get('/', (req, res) => {
-  res.send('Hola, bienvenido a Cuarenta');
+  res.send('Hola, bienvenido a Stock IA API!');
 });
 
 app.use(routes);
