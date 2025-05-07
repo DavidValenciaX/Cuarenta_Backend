@@ -12,6 +12,12 @@ class PurchaseOrder {
       return result;
     } catch (error) {
       await client.query('ROLLBACK');
+      // Handle specific database constraint errors
+      if (error.code === '23514' && error.constraint === 'products_check') {
+        const customError = new Error('El costo unitario no puede ser mayor o igual al precio unitario del producto. Actualice el precio del producto antes de aumentar el costo.');
+        customError.statusCode = 400;
+        throw customError;
+      }
       throw error;
     } finally {
       client.release();
@@ -44,6 +50,39 @@ class PurchaseOrder {
       // Insert all the purchase order products
       if (items && items.length > 0) {
         for (const item of items) {
+          // Obtener el producto actual para comparar precios
+          const { rows: productRows } = await client.query(
+            `SELECT unit_cost, unit_price FROM public.products WHERE id = $1 AND user_id = $2`,
+            [item.productId, userId]
+          );
+          if (!productRows.length) {
+            throw new Error(`No se encontró el producto con ID ${item.productId}`);
+          }
+          const currentUnitCost = Number(productRows[0].unit_cost);
+          const currentUnitPrice = Number(productRows[0].unit_price);
+          const newUnitCost = Number(item.unitCost);
+
+          // Si el costo ingresado es mayor o igual al precio actual, actualiza primero el precio y luego el costo
+          if (newUnitCost >= currentUnitPrice) {
+            // Actualiza el precio unitario a costo * 1.2 (redondea a 2 decimales)
+            const newUnitPrice = Math.round(newUnitCost * 1.2 * 100) / 100;
+            await client.query(
+              `UPDATE public.products SET unit_price = $1 WHERE id = $2 AND user_id = $3`,
+              [newUnitPrice, item.productId, userId]
+            );
+            // Luego actualiza el costo unitario
+            await client.query(
+              `UPDATE public.products SET unit_cost = $1 WHERE id = $2 AND user_id = $3`,
+              [newUnitCost, item.productId, userId]
+            );
+          } else if (newUnitCost > currentUnitCost) {
+            // Solo actualiza el costo si es mayor al actual pero menor al precio
+            await client.query(
+              `UPDATE public.products SET unit_cost = $1 WHERE id = $2 AND user_id = $3`,
+              [newUnitCost, item.productId, userId]
+            );
+          }
+
           // Insert the purchase order product
           await client.query(
             `INSERT INTO public.purchase_order_products(purchase_order_id, product_id, quantity, unit_cost)
@@ -77,18 +116,6 @@ class PurchaseOrder {
               previousStock,
               newStock: currentStock
             }, client);
-            
-            const currentUnitCost = Number(productResult.rows[0].unit_cost);
-            
-            if (Number(item.unitCost) > currentUnitCost) {
-              // Update the unit cost for the product
-              await client.query(
-                `UPDATE public.products
-                 SET unit_cost = $1
-                 WHERE id = $2 AND user_id = $3`,
-                [Number(item.unitCost), item.productId, userId]
-              );
-            }
           }
         }
       }

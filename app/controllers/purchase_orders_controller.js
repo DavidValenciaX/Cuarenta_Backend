@@ -56,7 +56,8 @@ async function createPurchaseOrder(req, res) {
     return sendResponse(res, 201, 'success', 'Orden de compra creada exitosamente', purchaseOrder);
   } catch (error) {
     console.error('Error al crear orden de compra:', error);
-    return sendResponse(res, 500, 'error', error.message || 'Error interno del servidor');
+    // Cambia aquí: usa el statusCode si existe, si no 500
+    return sendResponse(res, error.statusCode || 500, 'error', error.message || 'Error interno del servidor');
   }
 }
 
