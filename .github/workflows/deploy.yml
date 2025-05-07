@@ -33,7 +33,7 @@ jobs:
             git pull origin main
             
             # Install dependencies
-            npm install
+            npm ci
 
             # Restart the PM2 process or start it if it's not running
             pm2 restart CuarentaBackend || pm2 start index.js --name CuarentaBackend
