@@ -13,6 +13,7 @@ const statusRoutes = require('./status_routes');
 const measurementsRoutes = require('./measurements_routes');
 const inventoryTransactionsRoutes = require('./inventory_transactions_routes');
 const aiNotificationRoutes = require('./aiNotification_routes');
+const transactionTypesRoutes = require('./transaction_types_routes');
 
 const router = express.Router();
 
@@ -30,5 +31,6 @@ router.use('/status', statusRoutes);
 router.use('/measurements', measurementsRoutes);
 router.use('/inventory-transactions', inventoryTransactionsRoutes);
 router.use('/api', aiNotificationRoutes);
+router.use('/transaction-types', transactionTypesRoutes); // Nuevo uso de ruta
 
 module.exports = router;
