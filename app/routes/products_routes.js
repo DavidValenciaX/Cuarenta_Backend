@@ -1,8 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const { verificarToken } = require('../middlewares/auth_middleware');
-const { createProduct, listProducts, getProduct, updateProduct, deleteProduct, updateProductStock } = require('../controllers/products_controller');
-const { validateCreate, validateUpdate, validateId, validateStockUpdate } = require('../validators/product_validators');
+const { createProduct, listProducts, getProduct, updateProduct, deleteProduct, updateProductStock, findProduct } = require('../controllers/products_controller');
+const { validateCreate, validateUpdate, validateId, validateStockUpdate, validateFindQuery } = require('../validators/product_validators');
 const { validateResult } = require('../utils/validate_util');
 const upload = require('../middlewares/upload_middleware');
 
@@ -92,6 +92,57 @@ router.post('/', upload.single('image'), validateCreate, validateResult, createP
  *         description: Token inválido o expirado
  */
 router.get('/', listProducts);
+
+/**
+ * @swagger
+ * /products/find:
+ *   get:
+ *     summary: Buscar un producto por nombre o código de barras
+ *     tags: [Products]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: query
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: "Nombre o código de barras del producto a buscar"
+ *         example: "Producto X"
+ *     responses:
+ *       200:
+ *         description: Resultado de la búsqueda
+ *         content:
+ *           application/json:
+ *             schema:
+ *               oneOf:
+ *                 - type: object
+ *                   properties:
+ *                     found:
+ *                       type: boolean
+ *                       example: true
+ *                     id:
+ *                       type: integer
+ *                       example: 1
+ *                     name:
+ *                       type: string
+ *                       example: "Producto X"
+ *                     quantity:
+ *                       type: number
+ *                       example: 50
+ *                 - type: object
+ *                   properties:
+ *                     found:
+ *                       type: boolean
+ *                       example: false
+ *       400:
+ *         description: Error de validación (término de búsqueda requerido)
+ *       401:
+ *         description: Token inválido o expirado
+ *       500:
+ *         description: Error interno del servidor
+ */
+router.get('/find', validateFindQuery, validateResult, findProduct);
 
 /**
  * @swagger

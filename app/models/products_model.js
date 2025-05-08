@@ -149,6 +149,19 @@ class Product {
     return Number(rows[0].quantity) >= Number(requiredQuantity);
   }
 
+  // Find a product by name (partial match) or barcode (exact match) for a user
+  static async findByQueryAndUser(query, userId) {
+    const searchTerm = query.trim();
+    // Search by barcode (exact match) or name (case-insensitive partial match)
+    const { rows } = await pool.query(
+      `SELECT id, name, quantity FROM public.products 
+       WHERE user_id = $1 AND (barcode = $2 OR name ILIKE $3)
+       LIMIT 1`,
+      [userId, searchTerm, `%${searchTerm}%`]
+    );
+    return rows[0];
+  }
+
   // Adjust product quantity directly (for manual adjustments)
   static async adjustQuantity(id, userId, adjustmentQuantity, reason = null) {
     return this.executeWithTransaction(async (client) => {

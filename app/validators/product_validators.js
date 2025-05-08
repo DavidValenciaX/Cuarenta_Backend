@@ -1,4 +1,4 @@
-const { body, param } = require('express-validator');
+const { body, param, query } = require('express-validator');
 
 // Common field validations that will be used for both create and update
 const productFieldValidations = [
@@ -78,9 +78,19 @@ const validateStockUpdate = [
     .toFloat()
 ];
 
+// Validation for the find product query
+const validateFindQuery = [
+  query('query')
+    .trim()
+    .notEmpty().withMessage('El término de búsqueda es requerido')
+    .isLength({ min: 1, max: 100 }).withMessage('El término de búsqueda debe tener entre 1 y 100 caracteres')
+    .escape()
+];
+
 module.exports = {
   validateCreate: productFieldValidations,
   validateUpdate: [...validateProductId, ...productFieldValidations],
   validateId: validateProductId,
-  validateStockUpdate
+  validateStockUpdate,
+  validateFindQuery
 };

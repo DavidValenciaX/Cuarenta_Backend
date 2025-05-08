@@ -183,4 +183,27 @@ async function deleteProduct(req, res) {
   return sendResponse(res, 200, 'success', 'Producto eliminado');
 }
 
-module.exports = { createProduct, updateProduct, listProducts, getProduct, deleteProduct, updateProductStock };
+async function findProduct(req, res) {
+  try {
+    const { query } = req.query; // Changed from req.body to req.query
+    const userId = req.usuario.userId;
+
+    const product = await Product.findByQueryAndUser(query, userId);
+
+    if (product) {
+      return sendResponse(res, 200, 'success', 'Producto encontrado', {
+        found: true,
+        id: product.id,
+        name: product.name,
+        quantity: product.quantity
+      });
+    } else {
+      return sendResponse(res, 200, 'success', 'Producto no encontrado', { found: false });
+    }
+  } catch (error) {
+    console.error('Error in findProduct:', error);
+    return sendResponse(res, 500, 'error', 'Error al buscar el producto');
+  }
+}
+
+module.exports = { createProduct, updateProduct, listProducts, getProduct, deleteProduct, updateProductStock, findProduct };
