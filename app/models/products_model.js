@@ -149,17 +149,16 @@ class Product {
     return Number(rows[0].quantity) >= Number(requiredQuantity);
   }
 
-  // Find a product by name (partial match) or barcode (exact match) for a user
+  // Find a product by name (partial match) or barcode (case-insensitive partial match) for a user
   static async findByQueryAndUser(query, userId) {
     const searchTerm = query.trim();
-    // Search by barcode (exact match) or name (case-insensitive partial match)
+    // Search by barcode (case-insensitive partial match) or name (case-insensitive partial match)
     const { rows } = await pool.query(
-      `SELECT id, name, quantity FROM public.products 
-       WHERE user_id = $1 AND (barcode = $2 OR name ILIKE $3)
-       LIMIT 1`,
-      [userId, searchTerm, `%${searchTerm}%`]
+      `SELECT id, name, quantity, barcode, unit_price, image_url FROM public.products 
+       WHERE user_id = $1 AND (barcode ILIKE $2 OR name ILIKE $3)`,
+      [userId, `%${searchTerm}%`, `%${searchTerm}%`]
     );
-    return rows[0];
+    return rows;
   }
 
   // Adjust product quantity directly (for manual adjustments)

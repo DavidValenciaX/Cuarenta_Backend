@@ -97,7 +97,7 @@ router.get('/', listProducts);
  * @swagger
  * /products/find:
  *   get:
- *     summary: Buscar un producto por nombre o código de barras
+ *     summary: Buscar un producto por nombre o código de barras (coincidencia parcial)
  *     tags: [Products]
  *     security:
  *       - bearerAuth: []
@@ -107,34 +107,37 @@ router.get('/', listProducts);
  *         required: true
  *         schema:
  *           type: string
- *         description: "Nombre o código de barras del producto a buscar"
- *         example: "Producto X"
+ *         description: "Parte del nombre o código de barras del producto a buscar"
+ *         example: "compu"
  *     responses:
  *       200:
- *         description: Resultado de la búsqueda
+ *         description: Lista de productos encontrados o un arreglo vacío si no hay coincidencias.
  *         content:
  *           application/json:
  *             schema:
- *               oneOf:
- *                 - type: object
- *                   properties:
- *                     found:
- *                       type: boolean
- *                       example: true
- *                     id:
- *                       type: integer
- *                       example: 1
- *                     name:
- *                       type: string
- *                       example: "Producto X"
- *                     quantity:
- *                       type: number
- *                       example: 50
- *                 - type: object
- *                   properties:
- *                     found:
- *                       type: boolean
- *                       example: false
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   id:
+ *                     type: integer
+ *                     example: 1
+ *                   name:
+ *                     type: string
+ *                     example: "Computador Asus"
+ *                   quantity:
+ *                     type: number
+ *                     example: 50
+ *                   barcode:
+ *                     type: string
+ *                     example: "7501234567890"
+ *                   unitPrice:
+ *                     type: number
+ *                     example: 1200.00
+ *                   imageUrl:
+ *                     type: string
+ *                     nullable: true
+ *                     example: "/uploads/products/image.jpg"
  *       400:
  *         description: Error de validación (término de búsqueda requerido)
  *       401:

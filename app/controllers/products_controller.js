@@ -188,17 +188,19 @@ async function findProduct(req, res) {
     const { query } = req.query; // Changed from req.body to req.query
     const userId = req.usuario.userId;
 
-    const product = await Product.findByQueryAndUser(query, userId);
+    const products = await Product.findByQueryAndUser(query, userId);
 
-    if (product) {
-      return sendResponse(res, 200, 'success', 'Producto encontrado', {
-        found: true,
+    if (products && products.length > 0) {
+      return sendResponse(res, 200, 'success', 'Productos encontrados', products.map(product => ({
         id: product.id,
         name: product.name,
-        quantity: product.quantity
-      });
+        quantity: product.quantity,
+        barcode: product.barcode,
+        unitPrice: product.unit_price,
+        imageUrl: product.image_url
+      })));
     } else {
-      return sendResponse(res, 200, 'success', 'Producto no encontrado', { found: false });
+      return sendResponse(res, 200, 'success', 'No se encontraron productos', []);
     }
   } catch (error) {
     console.error('Error in findProduct:', error);
