@@ -153,6 +153,19 @@ class User {
     const { rows } = await pool.query(query, [userId]);
     return rows[0];
   }
+
+  // Buscar usuario por product_id
+  static async findUserByProductId(productId) {
+    const query = `
+      SELECT u.id
+      FROM public.users u
+      JOIN public.products p ON p.user_id = u.id
+      WHERE p.id = $1
+      LIMIT 1
+    `;
+    const { rows } = await pool.query(query, [productId]);
+    return rows[0];
+  }
 }
   
 module.exports = User;

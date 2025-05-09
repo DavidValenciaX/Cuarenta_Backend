@@ -1,4 +1,5 @@
-const AINotification = require('../models/aiNotification');
+const AINotification = require('../models/aiNotification_model');
+const User = require('../models/users_model'); // Importar el modelo de usuario
 
 class AINotificationController {
   /**
@@ -6,23 +7,39 @@ class AINotificationController {
    */
   static async create(req, res) {
     try {
-      const { product_id, user_id, message, prediction_details } = req.body;
-      
-      // Basic validation
-      if (!product_id || !user_id || !message) {
+      const { product_id, shortage_date, message, forecast, replenishment_plan } = req.body;
+
+      // Validación básica
+      if (!product_id || !message || !forecast) {
         return res.status(400).json({
           success: false,
-          message: 'Missing required fields: product_id, user_id, and message are required'
+          message: 'Missing required fields: product_id, message, and forecast are required'
         });
       }
-      
+
+      // Buscar user_id a partir del product_id
+      const user = await User.findUserByProductId(product_id);
+      if (!user) {
+        return res.status(404).json({
+          success: false,
+          message: 'User not found for the given product_id'
+        });
+      }
+
+      // prediction_details contendrá shortage_date, forecast y replenishment_plan
+      const prediction_details = {
+        shortage_date: shortage_date || null,
+        forecast,
+        replenishment_plan: replenishment_plan || null
+      };
+
       const notification = await AINotification.create({
         product_id,
-        user_id, 
+        user_id: user.id,
         message,
-        prediction_details: prediction_details || null
+        prediction_details
       });
-      
+
       return res.status(201).json({
         success: true,
         data: notification,
