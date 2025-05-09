@@ -1,5 +1,6 @@
 const AINotification = require('../models/ai_notification_model');
 const User = require('../models/users_model'); // Importar el modelo de usuario
+const { sendEmail } = require('../utils/email_util'); // Importar utilidad de email
 
 class AINotificationController {
   /**
@@ -47,6 +48,22 @@ class AINotificationController {
         message,
         prediction_details
       });
+
+      // Enviar correo al usuario con la notificación
+      try {
+        await sendEmail(
+          user.email,
+          'Nueva notificación de inventario IA',
+          `<p>Hola ${user.name || ''},</p>
+          <p>Tienes una nueva notificación de inventario generada por IA:</p>
+          <p><strong>${message}</strong></p>
+          <pre style="background:#f4f4f4;padding:10px;border-radius:6px;">${JSON.stringify(prediction_details, null, 2)}</pre>
+          <p>Por favor revisa tu panel para más detalles.</p>`
+        );
+      } catch (emailError) {
+        console.error('Error sending notification email:', emailError);
+        // No interrumpe el flujo principal
+      }
 
       return res.status(201).json({
         success: true,
