@@ -81,10 +81,6 @@ Totalmente. Utilizamos encriptación de extremo a extremo y seguimos los más al
 
 El sistema te alertará cuando el stock esté por debajo de los niveles mínimos que hayas configurado, y **Compra con IA** te sugerirá cuándo y cuánto deberías reordenar.
 
-### ¿Puedo tener múltiples usuarios en mi cuenta?
-
-Sí, puedes asignar diferentes roles y permisos a distintos usuarios de tu equipo.
-
 ## Soporte Técnico
 
 Estamos aquí para ayudarte con cualquier duda o inconveniente:
