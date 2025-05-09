@@ -7,14 +7,57 @@ const {
   getConfirmedSalesByProduct
 } = require('../controllers/inventory_transactions_controller');
 
-router.use(verificarToken);
-
 /**
  * @swagger
  * tags:
  *   name: Inventory Transactions
  *   description: Gestión del historial de movimientos de inventario
  */
+
+/**
+ * @swagger
+ * /inventory-transactions/confirmed-sales:
+ *   get:
+ *     summary: Obtener ventas confirmadas agrupadas por producto
+ *     tags: [Inventory Transactions]
+ *     responses:
+ *       200:
+ *         description: Lista de ventas confirmadas agrupadas por producto
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                 message:
+ *                   type: string
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       product_id:
+ *                         type: integer
+ *                       sales:
+ *                         type: array
+ *                         items:
+ *                           type: object
+ *                           properties:
+ *                             date:
+ *                               type: string
+ *                               format: date
+ *                             quantity:
+ *                               type: integer
+ *                       stock:
+ *                         type: integer
+ *       500:
+ *         description: Error en el servidor
+ */
+router.get('/confirmed-sales', getConfirmedSalesByProduct);
+
+// Aplica el middleware solo a las rutas que requieren autenticación
+router.use(verificarToken);
 
 /**
  * @swagger
@@ -73,47 +116,5 @@ router.get('/product/:id', getProductTransactions);
  *         description: Error en el servidor
  */
 router.get('/', getUserTransactions);
-
-/**
- * @swagger
- * /inventory-transactions/confirmed-sales:
- *   get:
- *     summary: Obtener ventas confirmadas agrupadas por producto
- *     tags: [Inventory Transactions]
- *     responses:
- *       200:
- *         description: Lista de ventas confirmadas agrupadas por producto
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 status:
- *                   type: string
- *                 message:
- *                   type: string
- *                 data:
- *                   type: array
- *                   items:
- *                     type: object
- *                     properties:
- *                       product_id:
- *                         type: integer
- *                       sales:
- *                         type: array
- *                         items:
- *                           type: object
- *                           properties:
- *                             date:
- *                               type: string
- *                               format: date
- *                             quantity:
- *                               type: integer
- *                       stock:
- *                         type: integer
- *       500:
- *         description: Error en el servidor
- */
-router.get('/confirmed-sales', getConfirmedSalesByProduct);
 
 module.exports = router;
