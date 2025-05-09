@@ -17,6 +17,14 @@ class AINotificationController {
         });
       }
 
+      // Validar que forecast sea un array
+      if (!Array.isArray(forecast)) {
+        return res.status(400).json({
+          success: false,
+          message: 'Forecast must be an array'
+        });
+      }
+
       // Buscar user_id a partir del product_id
       const user = await User.findUserByProductId(product_id);
       if (!user) {
@@ -26,7 +34,7 @@ class AINotificationController {
         });
       }
 
-      // prediction_details contendrá shortage_date, forecast y replenishment_plan
+      // prediction_details contendrá shortage_date, forecast (array) y replenishment_plan (string o null)
       const prediction_details = {
         shortage_date: shortage_date || null,
         forecast,
