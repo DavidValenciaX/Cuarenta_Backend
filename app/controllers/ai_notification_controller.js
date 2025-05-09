@@ -1,5 +1,6 @@
 const AINotification = require('../models/ai_notification_model');
 const User = require('../models/users_model'); // Importar el modelo de usuario
+const Product = require('../models/products_model'); // Importar el modelo de producto
 const { sendEmail } = require('../utils/email_util'); // Importar utilidad de email
 
 class AINotificationController {
@@ -49,18 +50,27 @@ class AINotificationController {
         prediction_details
       });
 
-      // Enviar correo al usuario con la notificación
+      // Enviar correo al usuario solo si hay plan de reabastecimiento
       try {
-        if (user.email && typeof user.email === 'string' && user.email.trim() !== '') {
+        if (
+          replenishment_plan && typeof replenishment_plan === 'string' && replenishment_plan.trim() !== '' &&
+          user.email && typeof user.email === 'string' && user.email.trim() !== ''
+        ) {
+          // Buscar el nombre del producto
+          const product = await Product.findById(product_id, user.id);
+          const productName = product ? product.name : 'desconocido';
+
           await sendEmail(
             user.email,
-            'Nueva notificación de inventario IA',
+            'Alerta de escasez de inventario IA',
             `<p>Hola ${user.full_name || ''},</p>
-            <p>Tienes una nueva notificación de inventario generada por IA:</p>
+            <p>El producto <strong>${productName}</strong> escaseará pronto:</p>
             <p><strong>${message}</strong></p>
-            <pre style="background:#f4f4f4;padding:10px;border-radius:6px;">${JSON.stringify(prediction_details, null, 2)}</pre>
+            <p><strong>Plan de reabastecimiento:</strong> ${replenishment_plan}</p>
             <p>Por favor revisa tu panel para más detalles.</p>`
           );
+        } else if (!replenishment_plan || replenishment_plan.trim() === '') {
+          // No enviar correo si no hay plan de reabastecimiento
         } else {
           console.error('No se puede enviar email: user.email es inválido:', user.email);
         }
