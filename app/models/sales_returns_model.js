@@ -104,40 +104,63 @@ class SalesReturn {
               [salesReturn.id, item.productId, item.quantity, item.statusId]
             );
 
-            // Check if the status is 'accepted' before updating inventory
+            // Check status for inventory actions
             const statusResult = await client.query(
               `SELECT name FROM public.status_types WHERE id = $1`,
               [item.statusId]
             );
             
-            if (statusResult.rows.length > 0 && statusResult.rows[0].name === 'accepted') {
-              // Only update inventory for products with 'accepted' status
-              const productResult = await client.query(
-                `UPDATE public.products
-                 SET quantity = quantity + $1
-                 WHERE id = $2 AND user_id = $3
-                 RETURNING quantity`,
-                [Number(item.quantity), item.productId, userId]
-              );
-              
-              if (!productResult.rows.length) {
-                throw new Error(`No se pudo actualizar inventario para producto ${item.productId}`);
+            if (statusResult.rows.length > 0) {
+              const statusName = statusResult.rows[0].name;
+              if (statusName === 'accepted') {
+                // Only update inventory for products with 'accepted' status
+                const productResult = await client.query(
+                  `UPDATE public.products
+                   SET quantity = quantity + $1
+                   WHERE id = $2 AND user_id = $3
+                   RETURNING quantity`,
+                  [Number(item.quantity), item.productId, userId]
+                );
+                
+                if (!productResult.rows.length) {
+                  throw new Error(`No se pudo actualizar inventario para producto ${item.productId}`);
+                }
+                
+                const currentStock = Number(productResult.rows[0].quantity);
+                const previousStock = currentStock - Number(item.quantity);
+                
+                // Record the transaction using the centralized method
+                await InventoryTransaction.recordTransaction({
+                  userId, 
+                  productId: item.productId, 
+                  quantity: Number(item.quantity), 
+                  transactionTypeId: InventoryTransaction.TRANSACTION_TYPES.SALE_RETURN,
+                  previousStock,
+                  newStock: currentStock
+                }, client);
+              } else if (statusName === 'damaged') {
+                // Record a LOSS transaction for damaged products (no stock update)
+                // Get current stock for the product
+                const { rows: productRows } = await client.query(
+                  `SELECT quantity FROM public.products WHERE id = $1 AND user_id = $2`,
+                  [item.productId, userId]
+                );
+                if (!productRows.length) {
+                  throw new Error(`No se pudo obtener inventario para producto ${item.productId}`);
+                }
+                const currentStock = Number(productRows[0].quantity);
+                // Record the loss transaction
+                await InventoryTransaction.recordTransaction({
+                  userId,
+                  productId: item.productId,
+                  quantity: -Number(item.quantity),
+                  transactionTypeId: InventoryTransaction.TRANSACTION_TYPES.LOSS,
+                  previousStock: currentStock,
+                  newStock: currentStock
+                }, client);
               }
-              
-              const currentStock = Number(productResult.rows[0].quantity);
-              const previousStock = currentStock - Number(item.quantity);
-              
-              // Record the transaction using the centralized method
-              await InventoryTransaction.recordTransaction({
-                userId, 
-                productId: item.productId, 
-                quantity: Number(item.quantity), 
-                transactionTypeId: InventoryTransaction.TRANSACTION_TYPES.SALE_RETURN,
-                previousStock,
-                newStock: currentStock
-              }, client);
+              // If status is 'under_review', no inventory update or transaction
             }
-            // If status is 'under_review' or 'damaged', no inventory update is made
           } catch (error) {
             // Handle unique constraint violation
             if (error.code === '23505') { // unique_violation PostgreSQL error code
