@@ -80,6 +80,66 @@ class InventoryTransaction {
     );
     return rows;
   }
+
+  /**
+   * Get confirmed sales transactions grouped by product for a user.
+   * Returns: [{ product_id, sales: [{date, quantity}], stock }]
+   */
+  static async getConfirmedSalesByProduct(userId) {
+    // 1. Obtener todas las transacciones de tipo "confirmed_sales_order" (id=3) del usuario
+    // 2. Agrupar por producto y fecha
+    // 3. Obtener el stock actual de cada producto
+    const salesQuery = `
+      SELECT 
+        it.product_id, 
+        DATE(it.created_at) as date, 
+        SUM(it.quantity) as quantity
+      FROM public.inventory_transactions it
+      WHERE it.user_id = $1 AND it.transaction_type_id = $2
+      GROUP BY it.product_id, DATE(it.created_at)
+      ORDER BY it.product_id, date
+    `;
+    const salesResult = await pool.query(salesQuery, [userId, InventoryTransaction.TRANSACTION_TYPES.CONFIRMED_SALES_ORDER]);
+
+    // Agrupar ventas por producto
+    const salesByProduct = {};
+    for (const row of salesResult.rows) {
+      const pid = Number(row.product_id);
+      if (!salesByProduct[pid]) {
+        salesByProduct[pid] = [];
+      }
+      salesByProduct[pid].push({
+        date: row.date,
+        quantity: Number(row.quantity)
+      });
+    }
+
+    // Obtener el stock actual de todos los productos involucrados
+    const productIds = Object.keys(salesByProduct);
+    let stocks = {};
+    if (productIds.length > 0) {
+      const stockQuery = `
+        SELECT id as product_id, quantity as stock
+        FROM public.products
+        WHERE user_id = $1 AND id = ANY($2::int[])
+      `;
+      const stockResult = await pool.query(stockQuery, [userId, productIds]);
+      for (const row of stockResult.rows) {
+        stocks[Number(row.product_id)] = Number(row.stock);
+      }
+    }
+
+    // Construir el resultado final
+    const result = [];
+    for (const pid of productIds) {
+      result.push({
+        product_id: Number(pid),
+        sales: salesByProduct[pid],
+        stock: stocks[pid] ?? null
+      });
+    }
+    return result;
+  }
 }
 
 module.exports = InventoryTransaction;

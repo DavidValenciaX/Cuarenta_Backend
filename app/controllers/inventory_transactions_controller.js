@@ -41,7 +41,20 @@ async function getUserTransactions(req, res) {
   }
 }
 
+// Get confirmed sales orders grouped by product
+async function getConfirmedSalesByProduct(req, res) {
+  try {
+    const userId = req.usuario.userId;
+    const data = await InventoryTransaction.getConfirmedSalesByProduct(userId);
+    return sendResponse(res, 200, 'success', 'Ventas confirmadas agrupadas por producto', data);
+  } catch (error) {
+    console.error('Error al obtener ventas confirmadas agrupadas:', error);
+    return sendResponse(res, 500, 'error', 'Error interno del servidor');
+  }
+}
+
 module.exports = {
   getProductTransactions,
-  getUserTransactions
+  getUserTransactions,
+  getConfirmedSalesByProduct
 };

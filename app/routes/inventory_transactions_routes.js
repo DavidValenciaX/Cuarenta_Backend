@@ -3,7 +3,8 @@ const router = express.Router();
 const { verificarToken } = require('../middlewares/auth_middleware');
 const {
   getProductTransactions,
-  getUserTransactions
+  getUserTransactions,
+  getConfirmedSalesByProduct
 } = require('../controllers/inventory_transactions_controller');
 
 router.use(verificarToken);
@@ -72,5 +73,51 @@ router.get('/product/:id', getProductTransactions);
  *         description: Error en el servidor
  */
 router.get('/', getUserTransactions);
+
+/**
+ * @swagger
+ * /inventory-transactions/confirmed-sales:
+ *   get:
+ *     summary: Obtener ventas confirmadas agrupadas por producto
+ *     tags: [Inventory Transactions]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Lista de ventas confirmadas agrupadas por producto
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                 message:
+ *                   type: string
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       product_id:
+ *                         type: integer
+ *                       sales:
+ *                         type: array
+ *                         items:
+ *                           type: object
+ *                           properties:
+ *                             date:
+ *                               type: string
+ *                               format: date
+ *                             quantity:
+ *                               type: integer
+ *                       stock:
+ *                         type: integer
+ *       401:
+ *         description: Token inválido o expirado
+ *       500:
+ *         description: Error en el servidor
+ */
+router.get('/confirmed-sales', getConfirmedSalesByProduct);
 
 module.exports = router;
