@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const AINotificationController = require('../controllers/aiNotificationController');
+const AINotificationController = require('../controllers/ai_notification_controller');
 const { verificarToken } = require('../middlewares/auth_middleware');
 
 /**

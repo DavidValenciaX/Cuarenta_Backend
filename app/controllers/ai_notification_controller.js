@@ -1,4 +1,4 @@
-const AINotification = require('../models/aiNotification_model');
+const AINotification = require('../models/ai_notification_model');
 const User = require('../models/users_model'); // Importar el modelo de usuario
 
 class AINotificationController {

@@ -12,7 +12,7 @@ const purchaseReturnsRoutes = require('./purchase_returns_routes');
 const statusRoutes = require('./status_routes');
 const measurementsRoutes = require('./measurements_routes');
 const inventoryTransactionsRoutes = require('./inventory_transactions_routes');
-const aiNotificationRoutes = require('./aiNotification_routes');
+const aiNotificationRoutes = require('./ai_notification_routes');
 
 const router = express.Router();
 
