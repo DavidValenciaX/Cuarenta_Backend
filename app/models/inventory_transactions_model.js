@@ -16,6 +16,20 @@ class InventoryTransaction {
   };
 
   /**
+   * Obtiene todos los tipos de transacciones de inventario.
+   * @returns {Promise<Array>} Lista de tipos de transacción.
+   */
+  static async getAllTransactionTypes() {
+    const query = `
+      SELECT id, name, description 
+      FROM public.transaction_types
+      ORDER BY id;
+    `;
+    const { rows } = await pool.query(query);
+    return rows;
+  }
+
+  /**
    * Records an inventory transaction
    * @param {Object} transaction - The transaction details
    * @param {number} transaction.userId - User ID

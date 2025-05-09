@@ -4,7 +4,8 @@ const { verificarToken } = require('../middlewares/auth_middleware');
 const {
   getProductTransactions,
   getUserTransactions,
-  getConfirmedSalesByProduct
+  getConfirmedSalesByProduct,
+  listTransactionTypes
 } = require('../controllers/inventory_transactions_controller');
 
 /**
@@ -55,6 +56,45 @@ const {
  *         description: Error en el servidor
  */
 router.get('/confirmed-sales', getConfirmedSalesByProduct);
+
+/**
+ * @swagger
+ * /inventory-transactions/types:
+ *   get:
+ *     summary: Listar todos los tipos de transacciones de inventario
+ *     tags: [Inventory Transactions]
+ *     responses:
+ *       200:
+ *         description: Lista de tipos de transacciones
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: success
+ *                 message:
+ *                   type: string
+ *                   example: Tipos de transacción obtenidos exitosamente
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: integer
+ *                         example: 1
+ *                       name:
+ *                         type: string
+ *                         example: confirmed_purchase_order
+ *                       description:
+ *                         type: string
+ *                         example: "Orden de compra confirmada, aumenta stock"
+ *       500:
+ *         description: Error interno del servidor
+ */
+router.get('/types', listTransactionTypes);
 
 // Aplica el middleware solo a las rutas que requieren autenticación
 router.use(verificarToken);

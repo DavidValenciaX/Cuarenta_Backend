@@ -45,7 +45,6 @@ const swaggerOptions = {
       { name: 'Inventory Transactions', description: 'Gestión del historial de movimientos de inventario' },
       { name: 'Status', description: 'Gestión de estados y categorías de estados' },
       { name: 'Measurements', description: 'Gestión de tipos de medidas y unidades de medida' },
-      { name: 'Transaction Types', description: 'API para gestionar los tipos de transacciones de inventario' }, // Nueva etiqueta
       { name: 'AI Notifications', description: 'Gestión de notificaciones generadas por IA sobre inventario' }
     ],
     components: {
