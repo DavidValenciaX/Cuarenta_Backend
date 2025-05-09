@@ -55,7 +55,7 @@ class AINotificationController {
           await sendEmail(
             user.email,
             'Nueva notificación de inventario IA',
-            `<p>Hola ${user.name || ''},</p>
+            `<p>Hola ${user.full_name || ''},</p>
             <p>Tienes una nueva notificación de inventario generada por IA:</p>
             <p><strong>${message}</strong></p>
             <pre style="background:#f4f4f4;padding:10px;border-radius:6px;">${JSON.stringify(prediction_details, null, 2)}</pre>
