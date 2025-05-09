@@ -73,7 +73,7 @@ Stock IA está pensado para negocios de cualquier tamaño que necesiten un contr
 
 Sí, la aplicación móvil permite trabajar sin conexión y sincronizará los datos cuando recuperes la conexión.
 
-### ¿Es segura la información de mi negocio?
+### ¿Está segura la información de mi negocio?
 
 Totalmente. Utilizamos encriptación de extremo a extremo y seguimos los más altos estándares de seguridad informática para proteger tus datos.
 
@@ -90,7 +90,7 @@ Sí, puedes asignar diferentes roles y permisos a distintos usuarios de tu equip
 Estamos aquí para ayudarte con cualquier duda o inconveniente:
 
 - **Chat en vivo**: Disponible de lunes a viernes de 9:00 a 18:00 horas
-- **Correo electrónico**: [soporte@stockia.com](mailto:soporte@stockia.com)
+- **Correo electrónico**: [coffeetech361@zohomail.com](mailto:coffeetech361@zohomail.com)
 - **Teléfono**: +34 912 345 678
 - **Base de conocimientos**: Visita help.stockia.com para tutoriales y guías
 
