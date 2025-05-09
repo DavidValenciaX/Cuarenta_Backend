@@ -1,4 +1,4 @@
-const { pool } = require('../config/data_base');
+const pool = require('../config/data_base');
 
 /**
  * Class representing AI inventory notifications
