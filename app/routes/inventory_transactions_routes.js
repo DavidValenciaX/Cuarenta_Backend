@@ -80,8 +80,6 @@ router.get('/', getUserTransactions);
  *   get:
  *     summary: Obtener ventas confirmadas agrupadas por producto
  *     tags: [Inventory Transactions]
- *     security:
- *       - bearerAuth: []
  *     responses:
  *       200:
  *         description: Lista de ventas confirmadas agrupadas por producto
@@ -113,8 +111,6 @@ router.get('/', getUserTransactions);
  *                               type: integer
  *                       stock:
  *                         type: integer
- *       401:
- *         description: Token inválido o expirado
  *       500:
  *         description: Error en el servidor
  */

@@ -82,24 +82,24 @@ class InventoryTransaction {
   }
 
   /**
-   * Get confirmed sales transactions grouped by product for a user.
+   * Get confirmed sales transactions grouped by product for all users.
    * Returns: [{ product_id, sales: [{date, quantity}], stock }]
    */
-  static async getConfirmedSalesByProduct(userId) {
-    // 1. Obtener todas las transacciones de tipo "confirmed_sales_order" (id=3) del usuario
+  static async getConfirmedSalesByProduct() {
+    // 1. Obtener todas las transacciones de tipo "confirmed_sales_order" (id=3) de todos los usuarios
     // 2. Agrupar por producto y fecha
     // 3. Obtener el stock actual de cada producto
     const salesQuery = `
       SELECT 
         it.product_id, 
         DATE(it.created_at) as date, 
-        SUM(it.quantity) as quantity
+        SUM(ABS(it.quantity)) as quantity
       FROM public.inventory_transactions it
-      WHERE it.user_id = $1 AND it.transaction_type_id = $2
+      WHERE it.transaction_type_id = $1
       GROUP BY it.product_id, DATE(it.created_at)
       ORDER BY it.product_id, date
     `;
-    const salesResult = await pool.query(salesQuery, [userId, InventoryTransaction.TRANSACTION_TYPES.CONFIRMED_SALES_ORDER]);
+    const salesResult = await pool.query(salesQuery, [InventoryTransaction.TRANSACTION_TYPES.CONFIRMED_SALES_ORDER]);
 
     // Agrupar ventas por producto
     const salesByProduct = {};
@@ -121,9 +121,9 @@ class InventoryTransaction {
       const stockQuery = `
         SELECT id as product_id, quantity as stock
         FROM public.products
-        WHERE user_id = $1 AND id = ANY($2::int[])
+        WHERE id = ANY($1::int[])
       `;
-      const stockResult = await pool.query(stockQuery, [userId, productIds]);
+      const stockResult = await pool.query(stockQuery, [productIds]);
       for (const row of stockResult.rows) {
         stocks[Number(row.product_id)] = Number(row.stock);
       }
