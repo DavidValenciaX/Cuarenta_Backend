@@ -51,15 +51,19 @@ class AINotificationController {
 
       // Enviar correo al usuario con la notificación
       try {
-        await sendEmail(
-          user.email,
-          'Nueva notificación de inventario IA',
-          `<p>Hola ${user.name || ''},</p>
-          <p>Tienes una nueva notificación de inventario generada por IA:</p>
-          <p><strong>${message}</strong></p>
-          <pre style="background:#f4f4f4;padding:10px;border-radius:6px;">${JSON.stringify(prediction_details, null, 2)}</pre>
-          <p>Por favor revisa tu panel para más detalles.</p>`
-        );
+        if (user.email && typeof user.email === 'string' && user.email.trim() !== '') {
+          await sendEmail(
+            user.email,
+            'Nueva notificación de inventario IA',
+            `<p>Hola ${user.name || ''},</p>
+            <p>Tienes una nueva notificación de inventario generada por IA:</p>
+            <p><strong>${message}</strong></p>
+            <pre style="background:#f4f4f4;padding:10px;border-radius:6px;">${JSON.stringify(prediction_details, null, 2)}</pre>
+            <p>Por favor revisa tu panel para más detalles.</p>`
+          );
+        } else {
+          console.error('No se puede enviar email: user.email es inválido:', user.email);
+        }
       } catch (emailError) {
         console.error('Error sending notification email:', emailError);
         // No interrumpe el flujo principal
