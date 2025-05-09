@@ -318,7 +318,7 @@ Stock IA API es una solución completa para la gestión de inventario que integr
 
 #### Conceptos Clave - Notificaciones de IA
 
-1. **Notificación de IA**: Mensajes o alertas generadas por el sistema, potencialmente por un componente de inteligencia artificial, relacionadas con el inventario (ej. alertas de stock bajo, sugerencias de reposición, predicciones de demanda).
+1. **Notificación de IA**: Mensajes o alertas generadas por el sistema, específicamente por la funcionalidad "Compra con IA". Compra con IA utiliza Prophet, un modelo de inteligencia artificial desarrollado por Meta, que analiza tus órdenes de venta para ofrecerte un diagnóstico preciso. Te indica cuándo un producto podría agotarse, la cantidad de unidades que deberías comprar y el momento óptimo para realizar la compra. Estas notificaciones pueden incluir alertas de stock bajo, sugerencias de reposición y predicciones de demanda.
 2. **Estado de Notificación**: Indica si una notificación ha sido vista o procesada por el usuario (ej. "leída").
 
 #### Procesos - Notificaciones de IA
@@ -335,7 +335,7 @@ Stock IA API es una solución completa para la gestión de inventario que integr
 * Administración de clientes y proveedores
 * Control de órdenes de compra y venta
 * Seguimiento de devoluciones
-* Notificaciones inteligentes basadas en IA
+* Notificaciones inteligentes con **Compra con IA** (basadas en Prophet de Meta para predicción de demanda y escasez)
 * Historial completo de transacciones de inventario
 * Documentación integrada con Swagger
 
