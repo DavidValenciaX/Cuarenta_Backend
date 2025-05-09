@@ -116,11 +116,11 @@ class InventoryTransaction {
     const salesQuery = `
       SELECT 
         it.product_id, 
-        DATE(it.created_at) as date, 
+        DATE(it.transaction_date) as date, 
         SUM(ABS(it.quantity)) as quantity
       FROM public.inventory_transactions it
       WHERE it.transaction_type_id = $1
-      GROUP BY it.product_id, DATE(it.created_at)
+      GROUP BY it.product_id, DATE(it.transaction_date)
       ORDER BY it.product_id, date
     `;
     const salesResult = await pool.query(salesQuery, [InventoryTransaction.TRANSACTION_TYPES.CONFIRMED_SALES_ORDER]);
