@@ -136,7 +136,8 @@ class SalesReturn {
                   quantity: Number(item.quantity), 
                   transactionTypeId: InventoryTransaction.TRANSACTION_TYPES.SALE_RETURN,
                   previousStock,
-                  newStock: currentStock
+                  newStock: currentStock,
+                  transactionDate: returnDate
                 }, client);
               } else if (statusName === 'damaged') {
                 // Record a LOSS transaction for damaged products (no stock update)
@@ -156,7 +157,8 @@ class SalesReturn {
                   quantity: -Number(item.quantity),
                   transactionTypeId: InventoryTransaction.TRANSACTION_TYPES.LOSS,
                   previousStock: currentStock,
-                  newStock: currentStock
+                  newStock: currentStock,
+                  transactionDate: returnDate
                 }, client);
               }
               // If status is 'under_review', no inventory update or transaction
@@ -323,7 +325,8 @@ class SalesReturn {
               quantity: -Number(oldItem.quantity),
               transactionTypeId: InventoryTransaction.TRANSACTION_TYPES.ADJUSTMENT,
               previousStock,
-              newStock: currentStock
+              newStock: currentStock,
+              transactionDate: returnDate
             }, client);
           }
         }
@@ -410,7 +413,8 @@ class SalesReturn {
                   quantity: Number(item.quantity),
                   transactionTypeId: InventoryTransaction.TRANSACTION_TYPES.SALE_RETURN,
                   previousStock,
-                  newStock: currentStock
+                  newStock: currentStock,
+                  transactionDate: returnDate
                 }, client);
               }
             } else {
@@ -431,7 +435,8 @@ class SalesReturn {
                   quantity: Number(item.quantity),
                   transactionTypeId: InventoryTransaction.TRANSACTION_TYPES.SALE_RETURN,
                   previousStock,
-                  newStock: currentStock
+                  newStock: currentStock,
+                  transactionDate: returnDate
                 }, client);
               }
             }
@@ -489,7 +494,8 @@ class SalesReturn {
             quantity: -Number(quantity),
             transactionTypeId: InventoryTransaction.TRANSACTION_TYPES.CANCELLED_SALE_RETURN,
             previousStock,
-            newStock: currentStock
+            newStock: currentStock,
+            transactionDate: null // No hay returnDate en delete, se puede dejar null
           }, client);
         }
       }

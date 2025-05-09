@@ -27,7 +27,8 @@ class Product {
           quantity: Number(quantity),
           transactionTypeId: InventoryTransaction.TRANSACTION_TYPES.ADJUSTMENT,
           previousStock: initialQuantity,
-          newStock: Number(quantity)
+          newStock: Number(quantity),
+          transactionDate: new Date() // Usar la fecha actual
         }, client);
         
         // Then update the quantity
@@ -117,7 +118,8 @@ class Product {
           quantity: Number(quantityDifference),
           transactionTypeId: InventoryTransaction.TRANSACTION_TYPES.ADJUSTMENT,
           previousStock: oldQuantity,
-          newStock: newQuantity
+          newStock: newQuantity,
+          transactionDate: new Date() // Usar la fecha actual
         }, client);
       }
       

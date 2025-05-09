@@ -70,7 +70,8 @@ class PurchaseReturn {
               quantity: -Number(item.quantity),
               transactionTypeId: InventoryTransaction.TRANSACTION_TYPES.PURCHASE_RETURN,
               previousStock,
-              newStock: currentStock
+              newStock: currentStock,
+              transactionDate: returnDate // <-- aquí
             }, client);
           } catch (error) {
             // Handle unique constraint violation
@@ -162,7 +163,8 @@ class PurchaseReturn {
           quantity: item.quantity, // Note: This is positive in the original code
           transactionTypeId: InventoryTransaction.TRANSACTION_TYPES.ADJUSTMENT,
           previousStock,
-          newStock: currentStock
+          newStock: currentStock,
+          transactionDate: returnDate // <-- aquí
         }, client);
       }
       
@@ -228,7 +230,8 @@ class PurchaseReturn {
               quantity: -Number(item.quantity),
               transactionTypeId: InventoryTransaction.TRANSACTION_TYPES.PURCHASE_RETURN,
               previousStock,
-              newStock: currentStock
+              newStock: currentStock,
+              transactionDate: returnDate // <-- aquí
             }, client);
           } catch (error) {
             // Handle unique constraint violation
@@ -270,7 +273,8 @@ class PurchaseReturn {
           quantity: quantity, // Note: This is positive in the original code
           transactionTypeId: InventoryTransaction.TRANSACTION_TYPES.CANCELLED_PURCHASE_RETURN,
           previousStock,
-          newStock: currentStock
+          newStock: currentStock,
+          transactionDate: null // No hay returnDate en delete, se puede dejar null
         }, client);
       }
       

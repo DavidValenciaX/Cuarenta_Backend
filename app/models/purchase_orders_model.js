@@ -114,7 +114,8 @@ class PurchaseOrder {
               quantity: Number(item.quantity),
               transactionTypeId: InventoryTransaction.TRANSACTION_TYPES.CONFIRMED_PURCHASE_ORDER,
               previousStock,
-              newStock: currentStock
+              newStock: currentStock,
+              transactionDate: purchaseOrderDate
             }, client);
           }
         }
@@ -277,7 +278,8 @@ class PurchaseOrder {
                 quantity: newQuantity,
                 transactionTypeId: InventoryTransaction.TRANSACTION_TYPES.CONFIRMED_PURCHASE_ORDER,
                 previousStock,
-                newStock: currentStock
+                newStock: currentStock,
+                transactionDate: purchaseOrderDate
               }, client);
             }
             // Case 2: Product was in old order but old order was pending, new order is confirmed
@@ -297,7 +299,8 @@ class PurchaseOrder {
                 quantity: newQuantity,
                 transactionTypeId: InventoryTransaction.TRANSACTION_TYPES.CONFIRMED_PURCHASE_ORDER,
                 previousStock,
-                newStock: currentStock
+                newStock: currentStock,
+                transactionDate: purchaseOrderDate
               }, client);
             }
             
@@ -363,7 +366,8 @@ class PurchaseOrder {
             quantity: -quantity, // Note the negative sign
             transactionTypeId: InventoryTransaction.TRANSACTION_TYPES.CANCELLED_PURCHASE_ORDER,
             previousStock,
-            newStock: currentStock
+            newStock: currentStock,
+            transactionDate: null // No hay fecha explícita, se puede dejar null o usar new Date()
           }, client);
         }
       }

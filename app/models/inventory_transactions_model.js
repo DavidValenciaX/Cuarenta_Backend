@@ -38,6 +38,7 @@ class InventoryTransaction {
    * @param {number} transaction.transactionTypeId - Transaction type ID
    * @param {number} transaction.previousStock - Previous stock level
    * @param {number} transaction.newStock - New stock level
+   * @param {string|Date} [transaction.transactionDate] - Optional transaction date (YYYY-MM-DD or Date)
    * @param {Object} [client] - Optional database client for transaction support
    * @returns {Promise<Object>} The created transaction
    */
@@ -47,15 +48,24 @@ class InventoryTransaction {
     quantity, 
     transactionTypeId, 
     previousStock, 
-    newStock
+    newStock,
+    transactionDate // <-- nuevo campo
   }, client = null) {
     const query = `
       INSERT INTO public.inventory_transactions(
         user_id, product_id, quantity, transaction_type_id, 
-        previous_stock, new_stock
-      ) VALUES($1, $2, $3, $4, $5, $6)
+        previous_stock, new_stock, transaction_date
+      ) VALUES($1, $2, $3, $4, $5, $6, $7)
       RETURNING *`;
-    const values = [userId, productId, Number(quantity), transactionTypeId, previousStock, newStock];
+    const values = [
+      userId, 
+      productId, 
+      Number(quantity), 
+      transactionTypeId, 
+      previousStock, 
+      newStock,
+      transactionDate ? transactionDate : new Date() // Si no se provee, usa la fecha actual
+    ];
     
     // If a client is provided, use it (for transaction support)
     if (client) {

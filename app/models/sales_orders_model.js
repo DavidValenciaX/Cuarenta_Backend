@@ -73,7 +73,8 @@ class SalesOrder {
               quantity: -Number(item.quantity),
               transactionTypeId: InventoryTransaction.TRANSACTION_TYPES.CONFIRMED_SALES_ORDER,
               previousStock,
-              newStock: currentStock
+              newStock: currentStock,
+              transactionDate: salesOrderDate
             }, client);
           }
         }
@@ -263,7 +264,8 @@ class SalesOrder {
                   quantity: -quantityDifference,
                   transactionTypeId: InventoryTransaction.TRANSACTION_TYPES.ADJUSTMENT,
                   previousStock,
-                  newStock: currentStock
+                  newStock: currentStock,
+                  transactionDate: salesOrderDate
                 }, client);
               }
             }
@@ -284,7 +286,8 @@ class SalesOrder {
                 quantity: -quantity,
                 transactionTypeId: InventoryTransaction.TRANSACTION_TYPES.CONFIRMED_SALES_ORDER,
                 previousStock,
-                newStock: currentStock
+                newStock: currentStock,
+                transactionDate: salesOrderDate
               }, client);
             }
           }
@@ -305,7 +308,8 @@ class SalesOrder {
               quantity: -quantity,
               transactionTypeId: InventoryTransaction.TRANSACTION_TYPES.CONFIRMED_SALES_ORDER,
               previousStock,
-              newStock: currentStock
+              newStock: currentStock,
+              transactionDate: salesOrderDate
             }, client);
           }
           // No inventory changes for other status combinations
@@ -356,7 +360,8 @@ class SalesOrder {
             quantity: Number(quantity),
             transactionTypeId: InventoryTransaction.TRANSACTION_TYPES.CANCELLED_SALES_ORDER,
             previousStock,
-            newStock: currentStock
+            newStock: currentStock,
+            transactionDate: null // No specific date for cancellation
           }, client);
         }
       }
