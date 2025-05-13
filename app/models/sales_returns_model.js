@@ -403,6 +403,10 @@ class SalesReturn {
                   [Number(item.quantity), item.productId, userId]
                 );
                 
+                if (!productResult.rows.length) {
+                  throw new Error(`No se pudo actualizar inventario para producto ${item.productId}`);
+                }
+                
                 const currentStock = Number(productResult.rows[0].quantity);
                 const previousStock = currentStock - Number(item.quantity);
                 
@@ -424,6 +428,10 @@ class SalesReturn {
                   `UPDATE public.products SET quantity = quantity + $1 WHERE id = $2 AND user_id = $3 RETURNING quantity`,
                   [Number(item.quantity), item.productId, userId]
                 );
+                
+                if (!productResult.rows.length) {
+                  throw new Error(`No se pudo actualizar inventario para producto ${item.productId}`);
+                }
                 
                 const currentStock = Number(productResult.rows[0].quantity);
                 const previousStock = currentStock - Number(item.quantity);
