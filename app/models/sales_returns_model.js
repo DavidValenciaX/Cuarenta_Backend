@@ -421,32 +421,30 @@ class SalesReturn {
                   transactionDate: returnDate
                 }, client);
               }
-            } else {
+            } else if (newStatusName === 'accepted') {
               // This is a new item - only add to inventory if status is 'accepted'
-              if (newStatusName === 'accepted') {
-                const productResult = await client.query(
-                  `UPDATE public.products SET quantity = quantity + $1 WHERE id = $2 AND user_id = $3 RETURNING quantity`,
-                  [Number(item.quantity), item.productId, userId]
-                );
-                
-                if (!productResult.rows.length) {
-                  throw new Error(`No se pudo actualizar inventario para producto ${item.productId}`);
-                }
-                
-                const currentStock = Number(productResult.rows[0].quantity);
-                const previousStock = currentStock - Number(item.quantity);
-                
-                // Record sale return transaction
-                await InventoryTransaction.recordTransaction({
-                  userId,
-                  productId: item.productId,
-                  quantity: Number(item.quantity),
-                  transactionTypeId: InventoryTransaction.TRANSACTION_TYPES.SALE_RETURN,
-                  previousStock,
-                  newStock: currentStock,
-                  transactionDate: returnDate
-                }, client);
+              const productResult = await client.query(
+                `UPDATE public.products SET quantity = quantity + $1 WHERE id = $2 AND user_id = $3 RETURNING quantity`,
+                [Number(item.quantity), item.productId, userId]
+              );
+              
+              if (!productResult.rows.length) {
+                throw new Error(`No se pudo actualizar inventario para producto ${item.productId}`);
               }
+              
+              const currentStock = Number(productResult.rows[0].quantity);
+              const previousStock = currentStock - Number(item.quantity);
+              
+              // Record sale return transaction
+              await InventoryTransaction.recordTransaction({
+                userId,
+                productId: item.productId,
+                quantity: Number(item.quantity),
+                transactionTypeId: InventoryTransaction.TRANSACTION_TYPES.SALE_RETURN,
+                previousStock,
+                newStock: currentStock,
+                transactionDate: returnDate
+              }, client);
             }
             
             // Insert the new or updated item with status
