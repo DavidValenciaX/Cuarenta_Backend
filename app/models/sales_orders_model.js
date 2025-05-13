@@ -243,33 +243,56 @@ class SalesOrder {
 
           // Update inventory based on business rules
           if (newStatusName === 'confirmed') {
-            // Case 1: Product existed in old order (updated quantity)
-            if (productId in oldItemsMap) {
-              const quantityDifference = quantity - oldItemsMap[productId];
-              
-              // Only update inventory if the quantity has changed
-              if (quantityDifference !== 0) {
+            if (oldStatusName === 'confirmed') {
+              // Case 1: Product existed in old order (updated quantity)
+              if (productId in oldItemsMap) {
+                const quantityDifference = quantity - oldItemsMap[productId];
+                
+                // Only update inventory if the quantity has changed
+                if (quantityDifference !== 0) {
+                  const productResult = await client.query(
+                    `UPDATE public.products SET quantity = quantity - $1 
+                     WHERE id = $2 AND user_id = $3 RETURNING quantity`,
+                    [quantityDifference, productId, userId]
+                  );
+                  
+                  const currentStock = Number(productResult.rows[0].quantity);
+                  const previousStock = currentStock + quantityDifference;
+
+                  await InventoryTransaction.recordTransaction({
+                    userId,
+                    productId,
+                    quantity: -quantityDifference,
+                    transactionTypeId: InventoryTransaction.TRANSACTION_TYPES.ADJUSTMENT,
+                    previousStock,
+                    newStock: currentStock,
+                    transactionDate: salesOrderDate
+                  }, client);
+                }
+              }
+              // Case 2: New product added to a confirmed order
+              else {
                 const productResult = await client.query(
                   `UPDATE public.products SET quantity = quantity - $1 
                    WHERE id = $2 AND user_id = $3 RETURNING quantity`,
-                  [quantityDifference, productId, userId]
+                  [quantity, productId, userId]
                 );
                 
                 const currentStock = Number(productResult.rows[0].quantity);
-                const previousStock = currentStock + quantityDifference;
+                const previousStock = currentStock + quantity;
 
                 await InventoryTransaction.recordTransaction({
                   userId,
                   productId,
-                  quantity: -quantityDifference,
-                  transactionTypeId: InventoryTransaction.TRANSACTION_TYPES.ADJUSTMENT,
+                  quantity: -quantity,
+                  transactionTypeId: InventoryTransaction.TRANSACTION_TYPES.CONFIRMED_SALES_ORDER,
                   previousStock,
                   newStock: currentStock,
                   transactionDate: salesOrderDate
                 }, client);
               }
             }
-            // Case 2: New product added to a confirmed order
+            // Case 3: Status changed from pending/draft to confirmed
             else {
               const productResult = await client.query(
                 `UPDATE public.products SET quantity = quantity - $1 
@@ -290,27 +313,6 @@ class SalesOrder {
                 transactionDate: salesOrderDate
               }, client);
             }
-          }
-          // Case 3: Status changed from pending to confirmed
-          else if (oldStatusName === 'pending' && newStatusName === 'confirmed') {
-            const productResult = await client.query(
-              `UPDATE public.products SET quantity = quantity - $1 
-               WHERE id = $2 AND user_id = $3 RETURNING quantity`,
-              [quantity, productId, userId]
-            );
-            
-            const currentStock = Number(productResult.rows[0].quantity);
-            const previousStock = currentStock + quantity;
-
-            await InventoryTransaction.recordTransaction({
-              userId,
-              productId,
-              quantity: -quantity,
-              transactionTypeId: InventoryTransaction.TRANSACTION_TYPES.CONFIRMED_SALES_ORDER,
-              previousStock,
-              newStock: currentStock,
-              transactionDate: salesOrderDate
-            }, client);
           }
           // No inventory changes for other status combinations
         }
