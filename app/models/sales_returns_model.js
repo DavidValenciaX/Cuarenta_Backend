@@ -73,7 +73,16 @@ class SalesReturn {
           
           // Check if return quantity exceeds available quantity
           if (Number(item.quantity) > availableToReturn) {
-            throw new Error(`La cantidad de devolución para el producto ${item.productId} excede la cantidad disponible para devolver. Máximo: ${availableToReturn}`);
+            // Get the product name for a more user-friendly error message
+            const { rows: productRows } = await client.query(
+              `SELECT name FROM public.products WHERE id = $1`,
+              [item.productId]
+            );
+            const productName = productRows.length > 0 ? productRows[0].name : `ID ${item.productId}`;
+            
+            throw new Error(`No hay suficientes unidades disponibles para devolver del producto "${productName}". 
+            Has intentado devolver ${item.quantity} unidades pero solo tienes ${availableToReturn} disponibles. 
+            Revisa las devoluciones anteriores de esta orden.`);
           }
         }
       }
@@ -268,7 +277,16 @@ class SalesReturn {
           
           // Check if return quantity exceeds available quantity
           if (Number(item.quantity) > availableToReturn) {
-            throw new Error(`La cantidad de devolución para el producto ${item.productId} excede la cantidad disponible para devolver. Máximo: ${availableToReturn}`);
+            // Get the product name for a more user-friendly error message
+            const { rows: productRows } = await client.query(
+              `SELECT name FROM public.products WHERE id = $1`,
+              [item.productId]
+            );
+            const productName = productRows.length > 0 ? productRows[0].name : `ID ${item.productId}`;
+            
+            throw new Error(`No hay suficientes unidades disponibles para devolver del producto "${productName}". 
+            Has intentado devolver ${item.quantity} unidades pero solo tienes ${availableToReturn} disponibles. 
+            Revisa las devoluciones anteriores de esta orden.`);
           }
         }
       }
