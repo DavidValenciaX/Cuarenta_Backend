@@ -56,11 +56,20 @@ async function updateCategory(req, res) {
 }
 
 async function deleteCategory(req, res) {
-  const { id } = req.params;
-  const userId = req.usuario.userId;
-  const deleted = await Category.delete(id, userId);
-  if (!deleted) return sendResponse(res, 404, 'error', 'Categoría no encontrada');
-  return sendResponse(res, 200, 'success', 'Categoría eliminada');
+  try {
+    const { id } = req.params;
+    const userId = req.usuario.userId;
+    const deleted = await Category.delete(id, userId);
+    if (!deleted) return sendResponse(res, 404, 'error', 'Categoría no encontrada');                                                                 
+    return sendResponse(res, 200, 'success', 'Categoría eliminada');
+  } catch (error) {
+    // Check for foreign key constraint violation
+    if (error.code === '23503' && error.constraint === 'products_category_id_fkey') {
+      return sendResponse(res, 409, 'error', 'No se puede eliminar la categoría porque tiene productos asociados');
+    }
+    console.error('Error al eliminar categoría:', error);
+    return sendResponse(res, 500, 'error', 'Error al eliminar la categoría', { details: error.message });              
+  }
 }
 
 module.exports = { createCategory, listCategories, getCategory, updateCategory, deleteCategory };
