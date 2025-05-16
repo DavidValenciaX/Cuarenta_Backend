@@ -6,7 +6,7 @@ const nameValidations = [
     .exists().withMessage('El nombre es requerido')
     .notEmpty().withMessage('El nombre no puede estar vacío')
     .isLength({ min: 2, max: 50 }).withMessage('El nombre debe tener entre 2 y 50 caracteres')
-    .matches(/^[a-zA-ZáéíóúÁÉÍÓÚñÑ0-9\s\-()]+$/).withMessage('El nombre solo puede contener letras, números, espacios, guiones, paréntesis y barras')
+    .matches(/^[a-zA-ZáéíóúÁÉÍÓÚñÑ0-9\s\-(),]+$/).withMessage('El nombre solo puede contener letras, números, espacios, guiones, paréntesis y comas')
     .trim()
     .escape()
 ];
