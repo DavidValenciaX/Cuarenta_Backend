@@ -8,7 +8,7 @@ const nameValidations = [
     .isLength({ min: 2, max: 50 }).withMessage('El nombre debe tener entre 2 y 50 caracteres')
     .matches(/^[a-zA-ZáéíóúÁÉÍÓÚñÑ0-9\s\-()]+$/).withMessage('El nombre solo puede contener letras, números, espacios, guiones, paréntesis y barras')
     .trim()
-    .escape() // Previene XSS sanitizando la entrada
+    .escape()
 ];
 
 // Validaciones para el parámetro ID

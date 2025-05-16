@@ -6,17 +6,22 @@ function normalizeName(name) {
 }
 
 async function createCategory(req, res) {
-  let { name } = req.body;
-  const userId = req.usuario.userId;
-  
-  name = normalizeName(name);
+  try {
+    let { name } = req.body;
+    const userId = req.usuario.userId;
+    
+    name = normalizeName(name);
 
-  // Verificar duplicado
-  const exists = await Category.findByNameAndUser(name, userId);
-  if (exists) return sendResponse(res, 409, 'error', 'Ya existe una categoría con ese nombre');
+    // Verificar duplicado
+    const exists = await Category.findByNameAndUser(name, userId);
+    if (exists) return sendResponse(res, 409, 'error', 'Ya existe una categoría con ese nombre');
 
-  const category = await Category.create(name, userId);
-  return sendResponse(res, 201, 'success', 'Categoría creada', category);
+    const category = await Category.create(name, userId);
+    return sendResponse(res, 201, 'success', 'Categoría creada', category);
+  } catch (error) {
+    console.error('Error al crear categoría:', error);
+    return sendResponse(res, 500, 'error', 'Error al crear la categoría', { details: error.message });
+  }
 }
 
 async function listCategories(req, res) {
