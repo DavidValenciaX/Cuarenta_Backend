@@ -226,6 +226,9 @@ async function deleteSalesOrder(req, res) {
     return sendResponse(res, 200, 'success', 'Orden de venta eliminada');
   } catch (error) {
     console.error('Error al eliminar orden de venta:', error);
+    if (error.message.includes('devoluciones asociadas')) {
+      return sendResponse(res, 409, 'error', error.message);
+    }
     return sendResponse(res, 500, 'error', 'Error interno del servidor');
   }
 }

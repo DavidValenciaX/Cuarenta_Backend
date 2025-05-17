@@ -337,6 +337,12 @@ class SalesOrder {
       if (!orderInfo.length) {
         return null; // Order doesn't exist or doesn't belong to user
       }
+
+      // Check for associated returns
+      const hasReturns = await this.hasAssociatedReturns(id, userId);
+      if (hasReturns) {
+        throw new Error('No se puede eliminar la orden de venta porque tiene devoluciones asociadas');
+      }
       
       // Get all items from the sales order
       const { rows: items } = await client.query(
@@ -394,6 +400,17 @@ class SalesOrder {
       [salesOrderId, userId]
     );
     return rows[0];
+  }
+
+  // Check if sales order has associated returns
+  static async hasAssociatedReturns(salesOrderId, userId) {
+    const { rows } = await pool.query(
+      `SELECT COUNT(*) as count 
+       FROM public.sales_returns 
+       WHERE sales_order_id = $1 AND user_id = $2`,
+      [salesOrderId, userId]
+    );
+    return parseInt(rows[0].count) > 0;
   }
 }
 
