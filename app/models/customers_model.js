@@ -52,6 +52,21 @@ class Customer {
   }
 
   static async delete(id, userId) {
+    // Check for dependencies first
+    const { rows: dependencies } = await pool.query(
+      `SELECT COUNT(*) as sales_orders FROM sales_orders WHERE customer_id = $1`,
+      [id]
+    );
+
+    if (dependencies[0].sales_orders > 0) {
+      const error = new Error('No se puede eliminar el cliente porque tiene órdenes de venta asociadas');
+      error.statusCode = 409;
+      error.dependencies = {
+        salesOrders: dependencies[0].sales_orders
+      };
+      throw error;
+    }
+
     const { rows } = await pool.query(
       `DELETE FROM public.customers WHERE id=$1 AND user_id=$2 RETURNING *`,
       [id, userId]

@@ -178,6 +178,8 @@ router.put('/:id', updateCustomerValidator, validateResult, updateCustomer);
  *         description: Cliente eliminado exitosamente
  *       404:
  *         description: Cliente no encontrado
+ *       409:
+ *         description: No se puede eliminar el cliente porque tiene órdenes de venta asociadas
  *       401:
  *         description: Token inválido o expirado
  */

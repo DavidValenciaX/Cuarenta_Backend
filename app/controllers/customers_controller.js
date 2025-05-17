@@ -57,9 +57,16 @@ async function updateCustomer(req, res) {
 }
 
 async function deleteCustomer(req, res) {
-  const deleted = await Customer.delete(req.params.id, req.usuario.userId);
-  if (!deleted) return sendResponse(res, 404, 'error', 'Cliente no encontrado');
-  return sendResponse(res, 200, 'success', 'Cliente eliminado');
+  try {
+    const deleted = await Customer.delete(req.params.id, req.usuario.userId);
+    if (!deleted) return sendResponse(res, 404, 'error', 'Cliente no encontrado');
+    return sendResponse(res, 200, 'success', 'Cliente eliminado');
+  } catch (error) {
+    if (error.statusCode === 409) {
+      return sendResponse(res, 409, 'error', error.message, error.dependencies);
+    }
+    throw error;
+  }
 }
 
 module.exports = { createCustomer, listCustomers, getCustomer, updateCustomer, deleteCustomer };
