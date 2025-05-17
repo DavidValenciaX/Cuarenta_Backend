@@ -258,6 +258,8 @@ router.put('/:id', upload.single('image'), validateUpdate, validateResult, updat
  *         description: Producto eliminado exitosamente
  *       404:
  *         description: Producto no encontrado
+ *       409:
+ *         description: No se puede eliminar el producto porque está asociado a órdenes o devoluciones
  *       401:
  *         description: Token inválido o expirado
  */

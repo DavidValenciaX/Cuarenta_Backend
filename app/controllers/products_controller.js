@@ -178,9 +178,26 @@ async function getProduct(req, res) {
 }
 
 async function deleteProduct(req, res) {
-  const deleted = await Product.delete(req.params.id, req.usuario.userId);
-  if (!deleted) return sendResponse(res, 404, 'error', 'Producto no encontrado');
-  return sendResponse(res, 200, 'success', 'Producto eliminado');
+  try {
+    const deleted = await Product.delete(req.params.id, req.usuario.userId);
+    if (!deleted) return sendResponse(res, 404, 'error', 'Producto no encontrado');
+    return sendResponse(res, 200, 'success', 'Producto eliminado');
+  } catch (error) {
+    if (error.statusCode === 409 && error.dependencies) {
+      const deps = error.dependencies;
+      const details = [];
+      if (deps.salesOrders > 0) details.push(`${deps.salesOrders} órdenes de venta`);
+      if (deps.purchaseOrders > 0) details.push(`${deps.purchaseOrders} órdenes de compra`);
+      if (deps.salesReturns > 0) details.push(`${deps.salesReturns} devoluciones de venta`);
+      if (deps.purchaseReturns > 0) details.push(`${deps.purchaseReturns} devoluciones de compra`);
+      
+      const message = `No se puede eliminar el producto porque está asociado a: ${details.join(', ')}`;
+      return sendResponse(res, 409, 'error', message);
+    }
+    
+    console.error(error);
+    return sendResponse(res, 500, 'error', 'Error al eliminar el producto');
+  }
 }
 
 async function findProduct(req, res) {

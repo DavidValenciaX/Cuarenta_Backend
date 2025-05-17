@@ -129,6 +129,30 @@ class Product {
 
   static async delete(id, userId) {
     return this.executeWithTransaction(async (client) => {
+      // Check for dependencies first
+      const { rows: dependencies } = await client.query(
+        `SELECT 
+          (SELECT COUNT(*) FROM sales_order_products WHERE product_id = $1) as sales_orders,
+          (SELECT COUNT(*) FROM purchase_order_products WHERE product_id = $1) as purchase_orders,
+          (SELECT COUNT(*) FROM sales_return_products WHERE product_id = $1) as sales_returns,
+          (SELECT COUNT(*) FROM purchase_return_products WHERE product_id = $1) as purchase_returns`,
+        [id]
+      );
+
+      const deps = dependencies[0];
+      if (deps.sales_orders > 0 || deps.purchase_orders > 0 || 
+          deps.sales_returns > 0 || deps.purchase_returns > 0) {
+        const error = new Error('No se puede eliminar el producto porque está asociado a órdenes o devoluciones');
+        error.statusCode = 409;
+        error.dependencies = {
+          salesOrders: deps.sales_orders,
+          purchaseOrders: deps.purchase_orders,
+          salesReturns: deps.sales_returns,
+          purchaseReturns: deps.purchase_returns
+        };
+        throw error;
+      }
+
       // Delete the product
       const { rows } = await client.query(
         `DELETE FROM public.products WHERE id=$1 AND user_id=$2 RETURNING *`,
