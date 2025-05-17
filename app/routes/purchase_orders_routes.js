@@ -222,6 +222,8 @@ router.put('/:id', validateUpdatePurchaseOrder, updatePurchaseOrder);
  *         description: Token inválido o expirado
  *       404:
  *         description: Orden no encontrada
+ *       409:
+ *         description: No se puede eliminar la orden de compra porque tiene devoluciones asociadas
  */
 router.delete('/:id', validateGetOrDeletePurchaseOrder, deletePurchaseOrder);
 

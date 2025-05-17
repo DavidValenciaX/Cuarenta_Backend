@@ -328,6 +328,20 @@ class PurchaseOrder {
   // Delete a purchase order and update inventory
   static async delete(id, userId) {
     return this.executeWithTransaction(async (client) => {
+      // First check if there are any associated returns
+      const { rows: returnsCheck } = await client.query(
+        `SELECT COUNT(*) as count 
+         FROM public.purchase_returns 
+         WHERE purchase_order_id = $1`,
+        [id]
+      );
+
+      if (returnsCheck[0].count > 0) {
+        const error = new Error('No se puede eliminar la orden de compra porque tiene devoluciones asociadas');
+        error.statusCode = 409; // Conflict status code
+        throw error;
+      }
+
       // Primero verificamos el estado de la orden de compra
       const { rows: orderInfo } = await client.query(
         `SELECT po.status_id, st.name as status_name 

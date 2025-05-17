@@ -176,7 +176,8 @@ async function deletePurchaseOrder(req, res) {
     return sendResponse(res, 200, 'success', 'Orden de compra eliminada exitosamente');
   } catch (error) {
     console.error('Error al eliminar orden de compra:', error);
-    return sendResponse(res, 500, 'error', 'Error interno del servidor');
+    // Use the statusCode from the error if it exists, otherwise default to 500
+    return sendResponse(res, error.statusCode || 500, 'error', error.message || 'Error interno del servidor');
   }
 }
 
