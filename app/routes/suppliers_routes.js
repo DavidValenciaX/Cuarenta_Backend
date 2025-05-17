@@ -171,6 +171,8 @@ router.put('/:id', updateSupplierValidation, validateResult, updateSupplier);
  *         description: Proveedor eliminado exitosamente
  *       404:
  *         description: Proveedor no encontrado
+ *       409:
+ *         description: No se puede eliminar el proveedor porque tiene órdenes de compra asociadas
  *       401:
  *         description: Token inválido o expirado
  */

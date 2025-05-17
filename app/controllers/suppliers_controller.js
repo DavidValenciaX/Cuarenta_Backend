@@ -55,7 +55,15 @@ async function updateSupplier(req,res) {
 }
 
 async function deleteSupplier(req,res) {
-  const deleted = await Supplier.delete(req.params.id, req.usuario.userId);
+  const supplierId = req.params.id;
+  const userId = req.usuario.userId;
+
+  const hasOrders = await Supplier.hasPurchaseOrders(supplierId, userId);
+  if (hasOrders) {
+    return sendResponse(res, 409, 'error', 'No se puede eliminar el proveedor porque tiene órdenes de compra asociadas');
+  }
+
+  const deleted = await Supplier.delete(supplierId, userId);
   if(!deleted) return sendResponse(res, 404, 'error', 'Proveedor no encontrado');
   return sendResponse(res, 200, 'success', 'Proveedor eliminado');
 }

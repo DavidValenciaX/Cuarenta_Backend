@@ -41,6 +41,17 @@ class Supplier {
     );
     return rows[0];
   }
+
+  static async hasPurchaseOrders(id, userId) {
+    const { rows } = await pool.query(
+      `SELECT EXISTS(
+        SELECT 1 FROM public.purchase_orders 
+        WHERE supplier_id = $1 AND user_id = $2
+      )`,
+      [id, userId]
+    );
+    return rows[0].exists;
+  }
   
   static async update(id, { name, email, phone, address }, userId) {
     const { rows } = await pool.query(
