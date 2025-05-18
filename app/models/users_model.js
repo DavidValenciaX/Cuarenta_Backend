@@ -165,6 +165,43 @@ class User {
     );
     return result.rows[0];
   }
+
+  static async updateUserProfile(userId, { fullName, companyName, phone }) {
+    const fieldsToUpdate = [];
+    const values = [];
+    let queryIndex = 1;
+
+    if (fullName) {
+      fieldsToUpdate.push(`full_name = $${queryIndex++}`);
+      values.push(fullName);
+    }
+    if (companyName) {
+      fieldsToUpdate.push(`company_name = $${queryIndex++}`);
+      values.push(companyName);
+    }
+    if (phone) {
+      fieldsToUpdate.push(`phone = $${queryIndex++}`);
+      values.push(phone);
+    }
+
+    if (fieldsToUpdate.length === 0) {
+      // No fields to update, maybe return current user data or an appropriate message
+      return this.findById(userId); 
+    }
+
+    fieldsToUpdate.push(`updated_at = CURRENT_TIMESTAMP`);
+
+    const query = `
+      UPDATE public.users
+      SET ${fieldsToUpdate.join(', ')}
+      WHERE id = $${queryIndex}
+      RETURNING id, full_name, company_name, email, phone, created_at, updated_at;
+    `;
+    values.push(userId);
+
+    const { rows } = await pool.query(query, values);
+    return rows[0];
+  }
 }
   
 module.exports = User;

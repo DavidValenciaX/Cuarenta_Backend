@@ -1,13 +1,14 @@
 const express = require('express');
 const router = express.Router();
-const { createUser,confirmEmail,loginUser,logoutUser,forgotPassword,resetPassword,getUserProfile } = require('../controllers/users_controller');
+const { createUser,confirmEmail,loginUser,logoutUser,forgotPassword,resetPassword,getUserProfile, updateUserProfile } = require('../controllers/users_controller');
 const { verificarToken } = require('../middlewares/auth_middleware'); // Importar middleware
 const { 
   validateRegistration, 
   validateLogin, 
   validateEmailConfirmation, 
   validateForgotPassword,
-  validateResetPassword
+  validateResetPassword,
+  validateUpdateProfile
 } = require('../validators/user_validators');
 
 /**
@@ -362,5 +363,78 @@ router.get('/perfil', verificarToken, (req, res) => {
  *         description: Error interno del servidor
  */
 router.get('/profile', verificarToken, getUserProfile);
+
+/**
+ * @swagger
+ * /users/profile:
+ *   put:
+ *     summary: Actualizar perfil de usuario
+ *     description: Actualiza la información del perfil del usuario autenticado (nombre completo, nombre de empresa, teléfono).
+ *     tags:
+ *       - Users
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               fullName:
+ *                 type: string
+ *                 example: 'Juan Nuevo Pérez'
+ *                 description: 'Opcional. Nuevo nombre completo del usuario.'
+ *               companyName:
+ *                 type: string
+ *                 example: 'Nueva Empresa XYZ'
+ *                 description: 'Opcional. Nuevo nombre de la empresa.'
+ *               phone:
+ *                 type: string
+ *                 example: '3101234567'
+ *                 description: 'Opcional. Nuevo número de teléfono (10 dígitos).'
+ *     responses:
+ *       200:
+ *         description: Perfil actualizado exitosamente
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: 'success'
+ *                 message:
+ *                   type: string
+ *                   example: 'Perfil actualizado exitosamente'
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: integer
+ *                     full_name:
+ *                       type: string
+ *                     company_name:
+ *                       type: string
+ *                     email:
+ *                       type: string
+ *                     phone:
+ *                       type: string
+ *                     created_at:
+ *                       type: string
+ *                       format: date-time
+ *                     updated_at:
+ *                       type: string
+ *                       format: date-time
+ *       400:
+ *         description: Error de validación o ningún campo proporcionado para actualizar
+ *       401:
+ *         description: Token inválido o expirado
+ *       404:
+ *         description: Usuario no encontrado
+ *       500:
+ *         description: Error interno del servidor
+ */
+router.put('/profile', verificarToken, validateUpdateProfile, updateUserProfile);
 
 module.exports = router;

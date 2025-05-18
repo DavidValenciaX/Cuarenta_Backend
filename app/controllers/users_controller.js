@@ -275,4 +275,28 @@ async function getUserProfile(req, res) {
   }
 }
 
-module.exports = { createUser, confirmEmail, loginUser, logoutUser, forgotPassword, resetPassword, getUserProfile };
+//Editar perfil de usuario
+async function updateUserProfile(req, res) {
+  try {
+    const userId = req.usuario.userId;
+    const { fullName, companyName, phone } = req.body;
+
+    // Check if there is at least one field to update
+    if (!fullName && !companyName && !phone) {
+      return sendResponse(res, 400, 'error', 'No fields provided for update');
+    }
+
+    const updatedUser = await User.updateUserProfile(userId, { fullName, companyName, phone });
+
+    if (!updatedUser) {
+      return sendResponse(res, 404, 'error', 'Usuario no encontrado o sin cambios para actualizar');
+    }
+
+    return sendResponse(res, 200, 'success', 'Perfil actualizado exitosamente', updatedUser);
+  } catch (error) {
+    console.error('Error in updateUserProfile:', error);
+    return sendResponse(res, 500, 'error', 'Error interno del servidor al actualizar el perfil');
+  }
+}
+
+module.exports = { createUser, confirmEmail, loginUser, logoutUser, forgotPassword, resetPassword, getUserProfile, updateUserProfile };

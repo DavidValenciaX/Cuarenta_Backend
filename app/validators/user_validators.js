@@ -97,10 +97,30 @@ const validateResetPassword = [
   }
 ];
 
+// Validator for updating user profile
+const validateUpdateProfile = [
+  check('fullName')
+    .optional()
+    .isLength({ min: 3 }).withMessage('Nombre completo debe tener al menos 3 caracteres'),
+
+  check('companyName')
+    .optional()
+    .isLength({ min: 2 }).withMessage('Nombre de la empresa debe tener al menos 2 caracteres'),
+  
+  check('phone')
+    .optional()
+    .matches(/^\d{10}$/).withMessage('Número telefónico debe tener 10 dígitos'),
+
+  (req, res, next) => {
+    validateResult(req, res, next);
+  }
+];
+
 module.exports = {
   validateRegistration,
   validateLogin,
   validateEmailConfirmation,
   validateForgotPassword,
-  validateResetPassword
+  validateResetPassword,
+  validateUpdateProfile
 };
